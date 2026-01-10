@@ -47,7 +47,7 @@ Issues = "https://github.com/dhellmann/gmail-inbox-summary/issues"
 Source = "https://github.com/dhellmann/gmail-inbox-summary"
 
 [project.scripts]
-gmail-summary = "gmail_summarizer.main:cli"
+gmail-summary = "gmail_summarizer.main:main"
 
 [tool.hatch.version]
 source = "vcs"

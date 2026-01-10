@@ -12,36 +12,60 @@ logger = logging.getLogger(__name__)
 class Config:
     """Configuration manager for gmail_summarizer."""
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_path: str = "config"):
         """Initialize configuration manager.
 
         Args:
-            config_dir: Directory containing configuration files
+            config_path: Directory containing configuration files or direct config file path
         """
-        self.config_dir = Path(config_dir)
+        config_path_obj = Path(config_path)
+        
+        # If it's a file, load it directly as a unified config
+        if config_path_obj.is_file():
+            self.config_file = config_path_obj
+            self.config_dir = config_path_obj.parent
+            self.unified_config = True
+        else:
+            # It's a directory with separate files
+            self.config_dir = config_path_obj
+            self.config_file = None
+            self.unified_config = False
+            
         self.settings: dict[str, Any] = {}
         self.categories: list[dict[str, Any]] = []
+        self.config: dict[str, Any] = {}  # For unified config
         self._load_config()
 
     def _load_config(self) -> None:
         """Load configuration from YAML files."""
-        # Load main settings
-        settings_file = self.config_dir / "settings.yaml"
-        if settings_file.exists():
-            with open(settings_file) as f:
-                self.settings = yaml.safe_load(f) or {}
+        if self.unified_config and self.config_file:
+            # Load from unified config file
+            with open(self.config_file) as f:
+                self.config = yaml.safe_load(f) or {}
+            
+            # Extract settings and categories from unified config
+            self.settings = self.config
+            self.categories = self.config.get("categories", [])
+            
         else:
-            logger.warning(f"Settings file not found: {settings_file}")
-            self._create_default_settings()
+            # Load from separate files (legacy format)
+            # Load main settings
+            settings_file = self.config_dir / "settings.yaml"
+            if settings_file.exists():
+                with open(settings_file) as f:
+                    self.settings = yaml.safe_load(f) or {}
+            else:
+                logger.warning(f"Settings file not found: {settings_file}")
+                self._create_default_settings()
 
-        # Load category definitions
-        categories_file = self.config_dir / "categories.yaml"
-        if categories_file.exists():
-            with open(categories_file) as f:
-                categories_data = yaml.safe_load(f) or {}
-                self.categories = categories_data.get("categories", [])
-        else:
-            logger.warning(f"Categories file not found: {categories_file}")
+            # Load category definitions
+            categories_file = self.config_dir / "categories.yaml"
+            if categories_file.exists():
+                with open(categories_file) as f:
+                    categories_data = yaml.safe_load(f) or {}
+                    self.categories = categories_data.get("categories", [])
+            else:
+                logger.warning(f"Categories file not found: {categories_file}")
             self._create_default_categories()
 
     def _create_default_settings(self) -> None:
@@ -131,6 +155,10 @@ class Config:
 
     def get_claude_config(self) -> dict[str, Any]:
         """Get Claude CLI configuration."""
+        # Handle unified config format
+        if self.unified_config and "claude" in self.config:
+            return self.config["claude"]  # type: ignore[no-any-return]
+        # Handle legacy format
         return self.settings.get("claude", {})  # type: ignore[no-any-return]
 
     def get_highlighting_config(self) -> dict[str, Any]:
@@ -147,12 +175,24 @@ class Config:
 
     def get_important_senders(self) -> list[str]:
         """Get list of important sender patterns."""
+        # Handle unified config format
+        if self.unified_config and "important_senders" in self.config:
+            return self.config["important_senders"]  # type: ignore[no-any-return]
+        # Handle legacy format
         return self.get_highlighting_config().get("important_senders", [])  # type: ignore[no-any-return]
 
     def get_max_threads_per_category(self) -> int:
         """Get maximum threads to process per category."""
+        # Handle unified config format
+        if self.unified_config and "max_threads_per_category" in self.config:
+            return self.config["max_threads_per_category"]  # type: ignore[no-any-return]
+        # Handle legacy format
         return self.get_output_config().get("max_threads_per_category", 50)  # type: ignore[no-any-return]
 
     def get_output_filename(self) -> str:
         """Get output HTML filename."""
+        # Handle unified config format
+        if self.unified_config and "output_file" in self.config:
+            return self.config["output_file"]  # type: ignore[no-any-return]
+        # Handle legacy format
         return self.get_output_config().get("filename", "inbox_summary.html")  # type: ignore[no-any-return]
