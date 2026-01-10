@@ -139,7 +139,9 @@ def check(email: str, config: Path | None, verbose: bool) -> None:
             imap_server = "imap.gmail.com"
             imap_port = 993
 
-        console.print(f"\n[yellow]Testing IMAP connection to {imap_server}:{imap_port}...[/yellow]")
+        console.print(
+            f"\n[yellow]Testing IMAP connection to {imap_server}:{imap_port}...[/yellow]"
+        )
 
         # Create IMAP client and test connection
         gmail_client = ImapGmailClient(

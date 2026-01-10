@@ -3,15 +3,21 @@
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import field_validator
 
 
 class GmailConfig(BaseModel):
     """Gmail IMAP configuration."""
 
     email_address: str = Field(..., description="Gmail email address")
-    password: str | None = Field(None, description="Gmail password (optional if using keychain)")
-    imap_server: str = Field(default="imap.gmail.com", description="IMAP server hostname")
+    password: str | None = Field(
+        None, description="Gmail password (optional if using keychain)"
+    )
+    imap_server: str = Field(
+        default="imap.gmail.com", description="IMAP server hostname"
+    )
     imap_port: int = Field(default=993, description="IMAP server port")
 
     @field_validator("email_address")
@@ -35,7 +41,9 @@ class ClaudeConfig(BaseModel):
     """Claude CLI configuration."""
 
     cli_path: str = Field(default="claude", description="Path to Claude CLI executable")
-    timeout: int = Field(default=30, description="Timeout in seconds for each summary request")
+    timeout: int = Field(
+        default=30, description="Timeout in seconds for each summary request"
+    )
 
     @field_validator("timeout")
     @classmethod
@@ -49,14 +57,26 @@ class ClaudeConfig(BaseModel):
 class CategoryCriteria(BaseModel):
     """Thread categorization criteria."""
 
-    from_patterns: list[str] = Field(default_factory=list, description="Sender email patterns")
-    to_patterns: list[str] = Field(default_factory=list, description="Recipient patterns")
-    subject_patterns: list[str] = Field(default_factory=list, description="Subject line patterns")
-    content_patterns: list[str] = Field(default_factory=list, description="Message content patterns")
-    headers: dict[str, str] = Field(default_factory=dict, description="Custom header patterns")
+    from_patterns: list[str] = Field(
+        default_factory=list, description="Sender email patterns"
+    )
+    to_patterns: list[str] = Field(
+        default_factory=list, description="Recipient patterns"
+    )
+    subject_patterns: list[str] = Field(
+        default_factory=list, description="Subject line patterns"
+    )
+    content_patterns: list[str] = Field(
+        default_factory=list, description="Message content patterns"
+    )
+    headers: dict[str, str] = Field(
+        default_factory=dict, description="Custom header patterns"
+    )
     labels: list[str] = Field(default_factory=list, description="Gmail labels")
 
-    @field_validator("from_patterns", "to_patterns", "subject_patterns", "content_patterns")
+    @field_validator(
+        "from_patterns", "to_patterns", "subject_patterns", "content_patterns"
+    )
     @classmethod
     def validate_regex_patterns(cls, v: list[str]) -> list[str]:
         """Validate regex patterns."""
@@ -75,7 +95,9 @@ class CategoryCriteria(BaseModel):
             try:
                 re.compile(pattern)
             except re.error as e:
-                raise ValueError(f"Invalid regex pattern for header '{header}': {e}") from e
+                raise ValueError(
+                    f"Invalid regex pattern for header '{header}': {e}"
+                ) from e
         return v
 
 
@@ -84,7 +106,9 @@ class Category(BaseModel):
 
     name: str = Field(..., description="Category display name")
     summary_prompt: str = Field(..., description="AI summary prompt for this category")
-    criteria: CategoryCriteria = Field(default_factory=CategoryCriteria, description="Matching criteria")
+    criteria: CategoryCriteria = Field(
+        default_factory=CategoryCriteria, description="Matching criteria"
+    )
 
     @field_validator("name")
     @classmethod
@@ -106,12 +130,24 @@ class Category(BaseModel):
 class AppConfig(BaseModel):
     """Main application configuration."""
 
-    gmail: GmailConfig = Field(default_factory=GmailConfig, description="Gmail configuration")
-    claude: ClaudeConfig = Field(default_factory=ClaudeConfig, description="Claude CLI configuration")
-    categories: list[Category] = Field(default_factory=list, description="Thread categories")
-    important_senders: list[str] = Field(default_factory=list, description="Important sender patterns")
-    output_file: str = Field(default="inbox_summary.html", description="Output HTML filename")
-    max_threads_per_category: int = Field(default=50, description="Maximum threads per category")
+    gmail: GmailConfig = Field(
+        default_factory=GmailConfig, description="Gmail configuration"
+    )
+    claude: ClaudeConfig = Field(
+        default_factory=ClaudeConfig, description="Claude CLI configuration"
+    )
+    categories: list[Category] = Field(
+        default_factory=list, description="Thread categories"
+    )
+    important_senders: list[str] = Field(
+        default_factory=list, description="Important sender patterns"
+    )
+    output_file: str = Field(
+        default="inbox_summary.html", description="Output HTML filename"
+    )
+    max_threads_per_category: int = Field(
+        default=50, description="Maximum threads per category"
+    )
 
     @field_validator("important_senders")
     @classmethod
@@ -141,7 +177,7 @@ class AppConfig(BaseModel):
             names = [cat.name for cat in v]
             if len(names) != len(set(names)):
                 raise ValueError("Category names must be unique")
-        
+
         return v
 
     def model_post_init(self, __context: Any) -> None:
@@ -151,7 +187,7 @@ class AppConfig(BaseModel):
                 Category(
                     name="Everything",
                     summary_prompt="Provide a brief summary of this email thread.",
-                    criteria=CategoryCriteria()
+                    criteria=CategoryCriteria(),
                 )
             ]
 

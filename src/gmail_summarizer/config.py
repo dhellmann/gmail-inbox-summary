@@ -7,7 +7,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from .config_models import AppConfig, Category, CategoryCriteria, ClaudeConfig, GmailConfig
+from .config_models import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -15,183 +15,64 @@ logger = logging.getLogger(__name__)
 class Config:
     """Configuration manager for gmail_summarizer."""
 
-    def __init__(self, config_path: str = "config"):
+    def __init__(self, config_path: str = "config.yaml"):
         """Initialize configuration manager.
 
         Args:
-            config_path: Directory containing configuration files or direct config file path
+            config_path: Path to the configuration YAML file
         """
-        config_path_obj = Path(config_path)
-
-        # If it's a file, load it directly as a unified config
-        if config_path_obj.is_file():
-            self.config_file: Path | None = config_path_obj
-            self.config_dir = config_path_obj.parent
-            self.unified_config = True
-        else:
-            # It's a directory with separate files
-            self.config_dir = config_path_obj
-            self.config_file = None
-            self.unified_config = False
-
-        self.settings: dict[str, Any] = {}
-        self.categories: list[dict[str, Any]] = []
-        self.config: dict[str, Any] = {}  # For unified config
+        self.config_file = Path(config_path)
         self.app_config: AppConfig | None = None  # Validated pydantic model
         self._load_config()
 
     def _load_config(self) -> None:
-        """Load and validate configuration from YAML files."""
+        """Load and validate configuration from YAML file."""
         try:
-            if self.unified_config and self.config_file:
-                # Load from unified config file
-                with open(self.config_file) as f:
-                    raw_config = yaml.safe_load(f) or {}
+            if not self.config_file.exists():
+                raise FileNotFoundError(
+                    f"Configuration file not found: {self.config_file}"
+                )
 
-                # Validate with pydantic
-                self.app_config = AppConfig.model_validate(raw_config)
-                
-                # Maintain backward compatibility
-                self.config = raw_config
-                self.settings = raw_config
-                self.categories = raw_config.get("categories", [])
+            # Load from config file
+            with open(self.config_file) as f:
+                raw_config = yaml.safe_load(f) or {}
 
-            else:
-                # Load from separate files (legacy format)
-                raw_config = self._load_legacy_config()
-                
-                # Validate with pydantic
-                self.app_config = AppConfig.model_validate(raw_config)
-                
-                # Maintain backward compatibility
-                self.config = raw_config
-                self.settings = raw_config
-                self.categories = raw_config.get("categories", [])
+            # Validate with pydantic
+            self.app_config = AppConfig.model_validate(raw_config)
 
         except ValidationError as e:
             logger.error(f"Configuration validation failed: {e}")
             raise ValueError(f"Invalid configuration: {e}") from e
         except Exception as e:
-            logger.error(f"Failed to load configuration: {e}")
+            logger.error(f"Failed to load configuration from {self.config_file}: {e}")
             raise
-
-    def _load_legacy_config(self) -> dict[str, Any]:
-        """Load configuration from separate legacy files."""
-        # Load main settings
-        settings_file = self.config_dir / "settings.yaml"
-        if settings_file.exists():
-            with open(settings_file) as f:
-                settings = yaml.safe_load(f) or {}
-        else:
-            logger.warning(f"Settings file not found: {settings_file}")
-            settings = self._get_default_settings()
-
-        # Load category definitions
-        categories_file = self.config_dir / "categories.yaml"
-        if categories_file.exists():
-            with open(categories_file) as f:
-                categories_data = yaml.safe_load(f) or {}
-                categories = categories_data.get("categories", [])
-        else:
-            logger.warning(f"Categories file not found: {categories_file}")
-            categories = self._get_default_categories()
-
-        # Combine into unified format for validation
-        return {
-            "gmail": settings.get("gmail", {}),
-            "claude": settings.get("claude", {}),
-            "categories": categories,
-            "important_senders": settings.get("highlighting", {}).get("important_senders", []),
-            "output_file": settings.get("output", {}).get("filename", "inbox_summary.html"),
-            "max_threads_per_category": settings.get("output", {}).get("max_threads_per_category", 50),
-        }
-
-    def _get_default_settings(self) -> dict[str, Any]:
-        """Get default settings configuration."""
-        return {
-            "gmail": {
-                "email_address": "your.email@gmail.com",
-                "password": "your-app-specific-password",
-                "imap_server": "imap.gmail.com",
-                "imap_port": 993,
-            },
-            "claude": {"cli_path": "claude", "timeout": 30},
-            "highlighting": {"important_senders": []},
-            "output": {
-                "filename": "inbox_summary.html",
-                "max_threads_per_category": 50,
-            },
-        }
-
-    def _get_default_categories(self) -> list[dict[str, Any]]:
-        """Get default category configuration."""
-        return [
-            {
-                "name": "Important Messages",
-                "criteria": {"labels": ["IMPORTANT"]},
-                "summary_prompt": "Summarize this important email thread, highlighting key action items and decisions.",
-            },
-            {
-                "name": "Jira Updates",
-                "criteria": {
-                    "from_patterns": [".*@atlassian\\.net", "jira@.*"],
-                    "subject_patterns": ["\\[JIRA\\]", "\\[.*-\\d+\\]"],
-                },
-                "summary_prompt": "Summarize this Jira ticket thread, focusing on status changes, assignments, and key updates.",
-            },
-            {
-                "name": "Code Reviews",
-                "criteria": {
-                    "from_patterns": ["noreply@github\\.com", "gitlab@.*"],
-                    "subject_patterns": ["\\[.*\\] Pull Request", "Merge Request"],
-                },
-                "summary_prompt": "Summarize this code review thread, noting merge status, feedback, and any blocking issues.",
-            },
-            {
-                "name": "Mailing Lists",
-                "criteria": {
-                    "to_patterns": [".*@lists\\.", ".*@groups\\."],
-                    "headers": {"List-Id": ".*"},
-                },
-                "summary_prompt": "Summarize this mailing list discussion, highlighting main topics and conclusions.",
-            },
-            {
-                "name": "Everything Else",
-                "criteria": {},
-                "summary_prompt": "Provide a brief summary of this email thread.",
-            },
-        ]
 
     def get_gmail_config(self) -> dict[str, Any]:
         """Get Gmail IMAP configuration."""
-        if self.app_config:
-            return self.app_config.gmail.model_dump()
-        return self.settings.get("gmail", {})  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return self.app_config.gmail.model_dump()
 
     def get_claude_config(self) -> dict[str, Any]:
         """Get Claude CLI configuration."""
-        if self.app_config:
-            return self.app_config.claude.model_dump()
-        # Handle unified config format
-        if self.unified_config and "claude" in self.config:
-            return self.config["claude"]  # type: ignore[no-any-return]
-        # Handle legacy format
-        return self.settings.get("claude", {})  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return self.app_config.claude.model_dump()
 
     def get_highlighting_config(self) -> dict[str, Any]:
         """Get sender highlighting configuration."""
-        if self.app_config:
-            return {"important_senders": self.app_config.important_senders}
-        return self.settings.get("highlighting", {})  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return {"important_senders": self.app_config.important_senders}
 
     def get_output_config(self) -> dict[str, Any]:
         """Get output configuration."""
-        if self.app_config:
-            return {
-                "filename": self.app_config.output_file,
-                "max_threads_per_category": self.app_config.max_threads_per_category,
-            }
-        return self.settings.get("output", {})  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return {
+            "filename": self.app_config.output_file,
+            "max_threads_per_category": self.app_config.max_threads_per_category,
+        }
 
     def get_categories(self) -> list[dict[str, Any]]:
         """Get thread categorization rules.
@@ -199,36 +80,24 @@ class Config:
         Categories are returned in the order they appear in the configuration file.
         The first matching category wins when categorizing threads.
         """
-        if self.app_config:
-            return [cat.model_dump() for cat in self.app_config.categories]
-        return self.categories
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return [cat.model_dump() for cat in self.app_config.categories]
 
     def get_important_senders(self) -> list[str]:
         """Get list of important sender patterns."""
-        if self.app_config:
-            return self.app_config.important_senders
-        # Handle unified config format
-        if self.unified_config and "important_senders" in self.config:
-            return self.config["important_senders"]  # type: ignore[no-any-return]
-        # Handle legacy format
-        return self.get_highlighting_config().get("important_senders", [])  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return self.app_config.important_senders
 
     def get_max_threads_per_category(self) -> int:
         """Get maximum threads to process per category."""
-        if self.app_config:
-            return self.app_config.max_threads_per_category
-        # Handle unified config format
-        if self.unified_config and "max_threads_per_category" in self.config:
-            return self.config["max_threads_per_category"]  # type: ignore[no-any-return]
-        # Handle legacy format
-        return self.get_output_config().get("max_threads_per_category", 50)  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return self.app_config.max_threads_per_category
 
     def get_output_filename(self) -> str:
         """Get output HTML filename."""
-        if self.app_config:
-            return self.app_config.output_file
-        # Handle unified config format
-        if self.unified_config and "output_file" in self.config:
-            return self.config["output_file"]  # type: ignore[no-any-return]
-        # Handle legacy format
-        return self.get_output_config().get("filename", "inbox_summary.html")  # type: ignore[no-any-return]
+        if not self.app_config:
+            raise RuntimeError("Configuration not loaded")
+        return self.app_config.output_file

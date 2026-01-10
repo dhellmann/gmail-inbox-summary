@@ -2,7 +2,6 @@
 
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
@@ -140,7 +139,11 @@ def test_empty_category_name_validation():
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
         "categories": [
-            {"name": "  ", "summary_prompt": "Test prompt", "criteria": {}}  # Empty name
+            {
+                "name": "  ",
+                "summary_prompt": "Test prompt",
+                "criteria": {},
+            }  # Empty name
         ],
     }
 
@@ -161,7 +164,11 @@ def test_duplicate_category_names_validation():
         "gmail": {"email_address": "test@gmail.com"},
         "categories": [
             {"name": "Test", "summary_prompt": "Test prompt 1", "criteria": {}},
-            {"name": "Test", "summary_prompt": "Test prompt 2", "criteria": {}},  # Duplicate
+            {
+                "name": "Test",
+                "summary_prompt": "Test prompt 2",
+                "criteria": {},
+            },  # Duplicate
         ],
     }
 

@@ -11,7 +11,7 @@ A Python application that generates AI-powered summaries of Gmail inbox threads 
 - **⚙️ Configurable Categories**: Define custom thread categories with flexible regex-based matching
 - **📊 Rich HTML Reports**: Beautiful, responsive HTML output with statistics and collapsible sections
 - **💻 Modern CLI**: Rich command-line interface with progress indicators and colored output
-- **🔧 Flexible Configuration**: Support for both unified YAML config files and modular configurations
+- **🔧 Flexible Configuration**: YAML configuration files with comprehensive validation
 - **🔒 Secure Credentials**: Cross-platform keychain storage for Gmail passwords with system integration
 - **✅ Configuration Validation**: Automatic validation of config files with clear error messages
 - **🧪 Comprehensive Testing**: Full test coverage with unit and integration tests
