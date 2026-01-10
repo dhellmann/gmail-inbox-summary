@@ -182,7 +182,11 @@ claude:
 
 ### Category Configuration
 
-Categories define how threads are organized and summarized. Categories are processed in the order they appear in the configuration file - the first matching category wins. Each category supports:
+Categories define how threads are organized and summarized. Categories are processed in the order they appear in the configuration file - the first matching category wins.
+
+**Default Behavior**: If no categories are defined in the configuration, a default "Everything" category is automatically created that matches all emails.
+
+Each category supports:
 
 ```yaml
 categories:
@@ -221,7 +225,7 @@ categories:
 
 - Use regex patterns with proper escaping: `\\.` for literal dots
 - Patterns are case-insensitive by default
-- Empty criteria `{}` creates a catch-all category
+- Empty criteria `{}` or criteria with all empty lists creates a catch-all category that matches all emails
 
 ### Advanced Configuration Options
 

@@ -241,6 +241,64 @@ def test_default_categories_created():
         categories = config.get_categories()
         assert len(categories) == 1
         assert categories[0]["name"] == "Everything"
+        assert categories[0]["summary_prompt"] == "Provide a brief summary of this email thread."
+        # Verify it's a catch-all category (empty criteria)
+        assert categories[0]["criteria"]["from_patterns"] == []
+        assert categories[0]["criteria"]["to_patterns"] == []
+        assert categories[0]["criteria"]["subject_patterns"] == []
+        assert categories[0]["criteria"]["content_patterns"] == []
+        assert categories[0]["criteria"]["headers"] == {}
+        assert categories[0]["criteria"]["labels"] == []
+    finally:
+        config_path.unlink()
+
+
+def test_default_category_with_empty_categories_list():
+    """Test that default category is created when categories list is explicitly empty."""
+    config_data = {
+        "gmail": {"email_address": "test@gmail.com"},
+        "categories": [],  # Explicitly empty categories list
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        config_path = Path(f.name)
+
+    try:
+        config = Config(str(config_path))
+        categories = config.get_categories()
+        assert len(categories) == 1
+        assert categories[0]["name"] == "Everything"
+        assert categories[0]["summary_prompt"] == "Provide a brief summary of this email thread."
+    finally:
+        config_path.unlink()
+
+
+def test_no_default_category_when_categories_provided():
+    """Test that no default category is created when categories are provided."""
+    config_data = {
+        "gmail": {"email_address": "test@gmail.com"},
+        "categories": [
+            {
+                "name": "Custom Category",
+                "summary_prompt": "Custom prompt",
+                "criteria": {"from_patterns": ["test@example.com"]},
+            }
+        ],
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        config_path = Path(f.name)
+
+    try:
+        config = Config(str(config_path))
+        categories = config.get_categories()
+        assert len(categories) == 1
+        assert categories[0]["name"] == "Custom Category"
+        assert categories[0]["summary_prompt"] == "Custom prompt"
+        # No "Everything" category should be created
+        assert all(cat["name"] != "Everything" for cat in categories)
     finally:
         config_path.unlink()
 

@@ -298,3 +298,134 @@ def test_process_threads_includes_gmail_url() -> None:
         processed_thread["gmail_url"]
         == "https://mail.google.com/mail/u/0/#search/12345"
     )
+
+
+def test_default_everything_category_matches_all() -> None:
+    """Test that the default 'Everything' category matches all emails."""
+    config = Mock(spec=Config)
+    # Set up config with default "Everything" category (empty criteria)
+    config.get_categories.return_value = [
+        {
+            "name": "Everything",
+            "criteria": {
+                "from_patterns": [],
+                "to_patterns": [],
+                "subject_patterns": [],
+                "content_patterns": [],
+                "headers": {},
+                "labels": [],
+            },
+            "summary_prompt": "Provide a brief summary of this email thread.",
+        }
+    ]
+    config.get_important_senders.return_value = []
+    config.get_max_threads_per_category.return_value = 50
+    processor = ThreadProcessor(config)
+
+    # Test various types of threads
+    threads_data = [
+        (
+            {"id": "thread1"},
+            [
+                {
+                    "label_ids": ["INBOX"],
+                    "from": "user1@example.com",
+                    "subject": "Random subject",
+                }
+            ],
+        ),
+        (
+            {"id": "thread2"},
+            [
+                {
+                    "label_ids": ["IMPORTANT", "WORK"],
+                    "from": "boss@company.com",
+                    "subject": "[URGENT] Meeting tomorrow",
+                }
+            ],
+        ),
+        (
+            {"id": "thread3"},
+            [
+                {
+                    "label_ids": ["CATEGORY_PROMOTIONS"],
+                    "from": "noreply@newsletter.com",
+                    "subject": "Weekly newsletter",
+                }
+            ],
+        ),
+    ]
+
+    result = processor.process_threads(threads_data)
+    
+    # All threads should be categorized under "Everything"
+    assert "Everything" in result
+    assert len(result["Everything"]) == 3
+    
+    # Verify all threads are in the Everything category
+    subjects = [thread["subject"] for thread in result["Everything"]]
+    assert "Random subject" in subjects
+    assert "[URGENT] Meeting tomorrow" in subjects
+    assert "Weekly newsletter" in subjects
+
+
+def test_is_empty_criteria() -> None:
+    """Test the _is_empty_criteria method correctly identifies catch-all criteria."""
+    config = Mock(spec=Config)
+    config.get_categories.return_value = []
+    config.get_important_senders.return_value = []
+    processor = ThreadProcessor(config)
+    
+    # Test empty dict
+    assert processor._is_empty_criteria({}) is True
+    
+    # Test criteria with all empty lists
+    empty_criteria = {
+        "from_patterns": [],
+        "to_patterns": [],
+        "subject_patterns": [],
+        "content_patterns": [],
+        "headers": {},
+        "labels": [],
+    }
+    assert processor._is_empty_criteria(empty_criteria) is True
+    
+    # Test criteria with some fields missing (should still be empty)
+    partial_empty = {
+        "from_patterns": [],
+        "labels": [],
+    }
+    assert processor._is_empty_criteria(partial_empty) is True
+    
+    # Test criteria with non-empty from_patterns
+    non_empty_from = {
+        "from_patterns": ["test@example.com"],
+        "to_patterns": [],
+        "subject_patterns": [],
+        "content_patterns": [],
+        "headers": {},
+        "labels": [],
+    }
+    assert processor._is_empty_criteria(non_empty_from) is False
+    
+    # Test criteria with non-empty labels
+    non_empty_labels = {
+        "from_patterns": [],
+        "to_patterns": [],
+        "subject_patterns": [],
+        "content_patterns": [],
+        "headers": {},
+        "labels": ["IMPORTANT"],
+    }
+    assert processor._is_empty_criteria(non_empty_labels) is False
+    
+    # Test criteria with non-empty headers
+    non_empty_headers = {
+        "from_patterns": [],
+        "to_patterns": [],
+        "subject_patterns": [],
+        "content_patterns": [],
+        "headers": {"List-Id": "test@example.com"},
+        "labels": [],
+    }
+    assert processor._is_empty_criteria(non_empty_headers) is False
