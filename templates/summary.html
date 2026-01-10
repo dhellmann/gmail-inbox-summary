@@ -172,6 +172,23 @@
             align-items: center;
         }
 
+        .gmail-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 4px 8px;
+            border: 1px solid #667eea;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .gmail-link:hover {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+        }
+
         .important-badge {
             background: #dc3545;
             color: white;
@@ -336,6 +353,9 @@
                                 <span class="important-badge">Important Sender</span>
                                 {% endif %}
                                 <span>{{ thread.message_count }} message{{ 's' if thread.message_count != 1 else '' }}</span>
+                                <a href="{{ thread.gmail_url }}" target="_blank" class="gmail-link" title="View in Gmail">
+                                    📧 View in Gmail
+                                </a>
                             </div>
                         </div>
 

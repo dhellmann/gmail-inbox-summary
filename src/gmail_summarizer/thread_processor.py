@@ -200,6 +200,7 @@ class ThreadProcessor:
                     "subject": self._extract_thread_subject(messages),
                     "participants": self._extract_participants(messages),
                     "message_count": len(messages),
+                    "gmail_url": self._generate_gmail_url(thread),
                 }
 
                 categorized_threads[category["name"]].append(thread_data)
@@ -285,3 +286,22 @@ class ThreadProcessor:
             }
 
         return summary
+
+    def _generate_gmail_url(self, thread: dict[str, Any]) -> str:
+        """Generate Gmail web interface URL for a thread.
+
+        Args:
+            thread: Thread object containing id
+
+        Returns:
+            Gmail web URL for viewing the thread
+        """
+        thread_id = thread.get("id", "")
+        # Handle IMAP-style thread IDs (thread_12345) by extracting the numeric part
+        if thread_id.startswith("thread_"):
+            # For IMAP threads, we may not have the actual Gmail thread ID
+            # Use the message ID as an approximation
+            return f"https://mail.google.com/mail/u/0/#search/{thread_id.replace('thread_', '')}"
+        else:
+            # For actual Gmail API thread IDs
+            return f"https://mail.google.com/mail/u/0/#inbox/{thread_id}"

@@ -230,3 +230,71 @@ def test_process_threads() -> None:
 
     regular_thread = result["Everything Else"][0]
     assert regular_thread["has_important_sender"] is False
+
+
+def test_gmail_url_generation() -> None:
+    """Test Gmail URL generation for different thread ID formats."""
+    config = Mock(spec=Config)
+    config.get_categories.return_value = []
+    config.get_important_senders.return_value = []
+    processor = ThreadProcessor(config)
+
+    # Test IMAP-style thread ID
+    imap_thread = {"id": "thread_12345"}
+    imap_url = processor._generate_gmail_url(imap_thread)
+    assert imap_url == "https://mail.google.com/mail/u/0/#search/12345"
+
+    # Test Gmail API thread ID
+    api_thread = {"id": "1234567890abcdef"}
+    api_url = processor._generate_gmail_url(api_thread)
+    assert api_url == "https://mail.google.com/mail/u/0/#inbox/1234567890abcdef"
+
+    # Test empty thread ID
+    empty_thread = {"id": ""}
+    empty_url = processor._generate_gmail_url(empty_thread)
+    assert empty_url == "https://mail.google.com/mail/u/0/#inbox/"
+
+    # Test thread without ID
+    no_id_thread = {}
+    no_id_url = processor._generate_gmail_url(no_id_thread)
+    assert no_id_url == "https://mail.google.com/mail/u/0/#inbox/"
+
+
+def test_process_threads_includes_gmail_url() -> None:
+    """Test that process_threads includes Gmail URL in thread data."""
+    config = Mock(spec=Config)
+    config.get_categories.return_value = [
+        {
+            "name": "Important",
+            "criteria": {"labels": ["IMPORTANT"]},
+            "summary_prompt": "Test prompt",
+        }
+    ]
+    config.get_important_senders.return_value = ["boss@company.com"]
+    config.get_max_threads_per_category.return_value = 50
+    processor = ThreadProcessor(config)
+
+    threads_data = [
+        (
+            {"id": "thread_12345"},
+            [
+                {
+                    "label_ids": ["IMPORTANT"],
+                    "from": "boss@company.com",
+                    "subject": "Test Subject",
+                }
+            ],
+        )
+    ]
+
+    result = processor.process_threads(threads_data)
+
+    # Get the processed thread
+    processed_thread = result["Important"][0]
+
+    # Verify Gmail URL is included
+    assert "gmail_url" in processed_thread
+    assert (
+        processed_thread["gmail_url"]
+        == "https://mail.google.com/mail/u/0/#search/12345"
+    )
