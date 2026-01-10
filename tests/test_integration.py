@@ -301,3 +301,125 @@ def test_cli_max_threads_override(sample_config_file: Path) -> None:
 
             # Config should be updated with override
             assert mock_config.config["max_threads_per_category"] == 15
+
+
+@patch("gmail_summarizer.main.ImapGmailClient")
+@patch("gmail_summarizer.main.CredentialManager")
+def test_creds_check_with_connection_test(
+    mock_credential_manager: Mock,
+    mock_imap_client: Mock,
+    sample_config_file: Path,
+) -> None:
+    """Test creds check command with IMAP connection testing."""
+    # Setup credential manager mock
+    mock_cred_mgr = Mock()
+    mock_credentials = Mock()
+    mock_credentials.email_address = "test@gmail.com"
+    mock_credentials.password = "test-password"
+    mock_cred_mgr.get_credentials.return_value = mock_credentials
+    mock_credential_manager.return_value = mock_cred_mgr
+
+    # Setup IMAP client mock
+    mock_client = Mock()
+    mock_imap_client.return_value = mock_client
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["creds", "check", "test@gmail.com", "--config", str(sample_config_file)]
+    )
+
+    assert result.exit_code == 0
+    assert "Credentials found for test@gmail.com in keychain" in result.output
+    assert "Testing IMAP connection to" in result.output
+    assert "IMAP connection successful" in result.output
+
+    # Verify mocks were called
+    mock_cred_mgr.get_credentials.assert_called_once_with("test@gmail.com")
+    mock_imap_client.assert_called_once()
+    mock_client.close.assert_called_once()
+
+
+@patch("gmail_summarizer.main.CredentialManager")
+def test_creds_check_no_credentials(
+    mock_credential_manager: Mock,
+    sample_config_file: Path,
+) -> None:
+    """Test creds check command when no credentials exist."""
+    # Setup credential manager mock to return None
+    mock_cred_mgr = Mock()
+    mock_cred_mgr.get_credentials.return_value = None
+    mock_credential_manager.return_value = mock_cred_mgr
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["creds", "check", "test@gmail.com", "--config", str(sample_config_file)]
+    )
+
+    assert result.exit_code != 0
+    assert "No credentials found for test@gmail.com in keychain" in result.output
+
+
+@patch("gmail_summarizer.main.ImapGmailClient")
+@patch("gmail_summarizer.main.CredentialManager")
+def test_creds_check_no_config_file(
+    mock_credential_manager: Mock,
+    mock_imap_client: Mock,
+) -> None:
+    """Test creds check command without config file (uses defaults)."""
+    # Setup credential manager mock
+    mock_cred_mgr = Mock()
+    mock_credentials = Mock()
+    mock_credentials.email_address = "test@gmail.com"
+    mock_credentials.password = "test-password"
+    mock_cred_mgr.get_credentials.return_value = mock_credentials
+    mock_credential_manager.return_value = mock_cred_mgr
+
+    # Setup IMAP client mock
+    mock_client = Mock()
+    mock_imap_client.return_value = mock_client
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["creds", "check", "test@gmail.com"])
+
+    assert result.exit_code == 0
+    assert "Credentials found for test@gmail.com in keychain" in result.output
+    assert "Testing IMAP connection to imap.gmail.com:993" in result.output
+    assert "IMAP connection successful" in result.output
+
+    # Verify IMAP client was called with default values
+    mock_imap_client.assert_called_once_with(
+        email_address="test@gmail.com",
+        password="test-password",
+        imap_server="imap.gmail.com",
+        imap_port=993,
+    )
+
+
+@patch("gmail_summarizer.main.ImapGmailClient")
+@patch("gmail_summarizer.main.CredentialManager")
+def test_creds_check_connection_failure(
+    mock_credential_manager: Mock,
+    mock_imap_client: Mock,
+    sample_config_file: Path,
+) -> None:
+    """Test creds check command when IMAP connection fails."""
+    # Setup credential manager mock
+    mock_cred_mgr = Mock()
+    mock_credentials = Mock()
+    mock_credentials.email_address = "test@gmail.com"
+    mock_credentials.password = "test-password"
+    mock_cred_mgr.get_credentials.return_value = mock_credentials
+    mock_credential_manager.return_value = mock_cred_mgr
+
+    # Setup IMAP client mock to raise exception
+    mock_imap_client.side_effect = Exception("Authentication failed")
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["creds", "check", "test@gmail.com", "--config", str(sample_config_file)]
+    )
+
+    assert result.exit_code != 0
+    assert "Credentials found for test@gmail.com in keychain" in result.output
+    assert "Testing IMAP connection to" in result.output
+    assert "IMAP connection failed: Authentication failed" in result.output

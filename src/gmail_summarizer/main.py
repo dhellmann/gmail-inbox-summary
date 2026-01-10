@@ -101,10 +101,65 @@ def store(email: str | None, update: bool) -> None:
 
 @creds.command()
 @click.argument("email")
-def check(email: str) -> None:
-    """Check if credentials exist for an email address."""
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to configuration file (optional)",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Enable verbose logging",
+)
+def check(email: str, config: Path | None, verbose: bool) -> None:
+    """Check credentials and test IMAP connection."""
+    setup_logging(verbose)
     credential_manager = CredentialManager()
-    credential_manager.check_credentials(email)
+
+    # First check if credentials exist in keychain
+    credentials = credential_manager.get_credentials(email)
+    if not credentials:
+        console.print(f"[red]✗ No credentials found for {email} in keychain[/red]")
+        raise click.Abort()
+
+    console.print(f"[green]✓ Credentials found for {email} in keychain[/green]")
+
+    # Test IMAP connection
+    try:
+        # Get IMAP settings from config file or use defaults
+        if config:
+            app_config = Config(str(config))
+            gmail_config = app_config.get_gmail_config()
+            imap_server = gmail_config.get("imap_server", "imap.gmail.com")
+            imap_port = gmail_config.get("imap_port", 993)
+        else:
+            # Use defaults when no config file is provided
+            imap_server = "imap.gmail.com"
+            imap_port = 993
+
+        console.print(f"\n[yellow]Testing IMAP connection to {imap_server}:{imap_port}...[/yellow]")
+
+        # Create IMAP client and test connection
+        gmail_client = ImapGmailClient(
+            email_address=credentials.email_address,
+            password=credentials.password,
+            imap_server=imap_server,
+            imap_port=imap_port,
+        )
+
+        # If we got here without exception, connection worked
+        console.print("[green]✓ IMAP connection successful[/green]")
+
+        # Clean up connection
+        gmail_client.close()
+
+    except Exception as e:
+        console.print(f"[red]✗ IMAP connection failed: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise click.Abort() from e
 
 
 @creds.command()

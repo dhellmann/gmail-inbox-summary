@@ -48,7 +48,12 @@ class ImapGmailClient:
 
             # Check for Gmail extensions
             if hasattr(self.imap, "capabilities"):
-                capabilities = self.imap.capabilities()
+                # capabilities can be either a tuple or callable depending on implementation
+                if callable(self.imap.capabilities):
+                    capabilities = self.imap.capabilities()
+                else:
+                    capabilities = self.imap.capabilities
+
                 if b"X-GM-EXT-1" in capabilities:
                     self.gmail_extensions = True
                     logger.info("Gmail IMAP extensions detected")
@@ -485,7 +490,16 @@ class ImapGmailClient:
         """Close IMAP connection."""
         if self.imap:
             try:
-                self.imap.close()
+                # Only close mailbox if one is currently selected
+                try:
+                    # Check if we're in SELECTED state
+                    state = getattr(self.imap, "state", None)
+                    if state == "SELECTED":
+                        self.imap.close()
+                except Exception:
+                    # If we can't check state or close fails, just continue to logout
+                    pass
+
                 self.imap.logout()
             except Exception as e:
                 logger.warning(f"Error closing IMAP connection: {e}")

@@ -138,8 +138,11 @@ gmail-summary creds store --email your.email@gmail.com
 # Update existing credentials
 gmail-summary creds store --email your.email@gmail.com --update
 
-# Check if credentials exist
+# Check if credentials exist and test IMAP connection
 gmail-summary creds check your.email@gmail.com
+
+# Check with custom config (for non-Gmail IMAP servers)
+gmail-summary creds check your.email@company.com --config config.yaml
 
 # Delete stored credentials
 gmail-summary creds delete your.email@gmail.com
@@ -160,6 +163,8 @@ gmail:
 ```
 
 **Security Note**: Store passwords in the system keychain using `gmail-summary creds store` instead of putting them in configuration files.
+
+**Convenience Feature**: The `creds check` command can work without a configuration file for Gmail accounts, using default IMAP settings (imap.gmail.com:993). For custom IMAP servers, provide a configuration file with the `--config` option.
 
 ### Claude Configuration
 
@@ -266,7 +271,9 @@ Credential Management:
     -e, --email TEXT       Gmail email address
     --update              Update existing credentials
 
-  gmail-summary creds check <EMAIL>     # Check if credentials exist
+  gmail-summary creds check <EMAIL> [OPTIONS]    # Check credentials and test IMAP connection
+    -c, --config PATH      Configuration file (optional, uses Gmail defaults)
+    -v, --verbose         Enable verbose logging
   gmail-summary creds delete <EMAIL>    # Delete stored credentials
 ```
 
@@ -387,7 +394,7 @@ Error: Gmail credentials not found
 - Store credentials: `gmail-summary creds store --email your.email@gmail.com`
 - Ensure Gmail IMAP is enabled in your Gmail settings
 - Use app-specific password, not your regular Gmail password
-- Check stored credentials: `gmail-summary creds check your.email@gmail.com`
+- Test stored credentials: `gmail-summary creds check your.email@gmail.com`
 
 **Claude CLI Connection Issues:**
 
