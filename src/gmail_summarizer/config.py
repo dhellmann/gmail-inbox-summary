@@ -99,13 +99,11 @@ class Config:
         self.categories = [
             {
                 "name": "Important Messages",
-                "order": 1,
                 "criteria": {"labels": ["IMPORTANT"]},
                 "summary_prompt": "Summarize this important email thread, highlighting key action items and decisions.",
             },
             {
                 "name": "Jira Updates",
-                "order": 2,
                 "criteria": {
                     "from_patterns": [".*@atlassian\\.net", "jira@.*"],
                     "subject_patterns": ["\\[JIRA\\]", "\\[.*-\\d+\\]"],
@@ -114,7 +112,6 @@ class Config:
             },
             {
                 "name": "Code Reviews",
-                "order": 3,
                 "criteria": {
                     "from_patterns": ["noreply@github\\.com", "gitlab@.*"],
                     "subject_patterns": ["\\[.*\\] Pull Request", "Merge Request"],
@@ -123,7 +120,6 @@ class Config:
             },
             {
                 "name": "Mailing Lists",
-                "order": 4,
                 "criteria": {
                     "to_patterns": [".*@lists\\.", ".*@groups\\."],
                     "headers": {"List-Id": ".*"},
@@ -132,7 +128,6 @@ class Config:
             },
             {
                 "name": "Everything Else",
-                "order": 999,
                 "criteria": {},
                 "summary_prompt": "Provide a brief summary of this email thread.",
             },
@@ -170,8 +165,12 @@ class Config:
         return self.settings.get("output", {})  # type: ignore[no-any-return]
 
     def get_categories(self) -> list[dict[str, Any]]:
-        """Get thread categorization rules."""
-        return sorted(self.categories, key=lambda x: x.get("order", 999))
+        """Get thread categorization rules.
+
+        Categories are returned in the order they appear in the configuration file.
+        The first matching category wins when categorizing threads.
+        """
+        return self.categories
 
     def get_important_senders(self) -> list[str]:
         """Get list of important sender patterns."""

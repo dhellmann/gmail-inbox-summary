@@ -121,29 +121,26 @@ class HTMLGenerator:
         Returns:
             Template context dictionary
         """
-        # Sort categories by the order specified in configuration
-        categories_config = {
-            cat["name"]: cat.get("order", 999) for cat in self.config.get_categories()
-        }
+        # Preserve category order as defined in configuration
+        categories_order = [cat["name"] for cat in self.config.get_categories()]
 
-        # Sort threads data by category order
+        # Sort threads data by configuration file order
         sorted_threads = {}
-        for category_name in sorted(
-            summarized_threads.keys(), key=lambda x: categories_config.get(x, 999)
-        ):
-            threads = summarized_threads[category_name]
-            if threads:  # Only include categories with threads
-                # Sort threads within category by importance and then by subject
-                sorted_threads_in_category = sorted(
-                    threads,
-                    key=lambda t: (
-                        not t.get(
-                            "has_important_sender", False
-                        ),  # Important first (False < True)
-                        t.get("subject", "").lower(),
-                    ),
-                )
-                sorted_threads[category_name] = sorted_threads_in_category
+        for category_name in categories_order:
+            if category_name in summarized_threads:
+                threads = summarized_threads[category_name]
+                if threads:  # Only include categories with threads
+                    # Sort threads within category by importance and then by subject
+                    sorted_threads_in_category = sorted(
+                        threads,
+                        key=lambda t: (
+                            not t.get(
+                                "has_important_sender", False
+                            ),  # Important first (False < True)
+                            t.get("subject", "").lower(),
+                        ),
+                    )
+                    sorted_threads[category_name] = sorted_threads_in_category
 
         # Calculate additional statistics
         total_threads = sum(len(threads) for threads in sorted_threads.values())

@@ -12,12 +12,11 @@ claude:
   timeout: 30           # Timeout in seconds for each summary request
 
 # Thread Categories
-# Categories are processed in order - first match wins
-# Use 'order' field to control sorting in the output
+# Categories are processed in order they appear below - first match wins
+# Categories are displayed in the same order they are defined here
 categories:
   # High Priority Work Email
   - name: "Urgent Work"
-    order: 1
     summary_prompt: "Summarize this urgent work email focusing on immediate action items, deadlines, and key decisions needed."
     criteria:
       from_patterns:
@@ -30,7 +29,6 @@ categories:
 
   # Regular Work Email  
   - name: "Work Email"
-    order: 2
     summary_prompt: "Summarize this work-related email focusing on action items, decisions, deadlines, and project updates."
     criteria:
       from_patterns:
@@ -43,7 +41,6 @@ categories:
 
   # Code & Development
   - name: "Development"
-    order: 3
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
     criteria:
       from_patterns:
@@ -59,7 +56,6 @@ categories:
 
   # Financial & Business
   - name: "Financial"
-    order: 4
     summary_prompt: "Summarize this financial communication focusing on amounts, due dates, and required actions."
     criteria:
       from_patterns:
@@ -74,7 +70,6 @@ categories:
 
   # Newsletters & Updates
   - name: "Newsletters"
-    order: 5
     summary_prompt: "Provide a brief summary of the key topics and interesting points from this newsletter or update."
     criteria:
       subject_patterns:
@@ -86,7 +81,6 @@ categories:
 
   # Travel & Logistics
   - name: "Travel"
-    order: 6
     summary_prompt: "Summarize travel details including dates, times, confirmation numbers, and important instructions."
     criteria:
       from_patterns:
@@ -102,7 +96,6 @@ categories:
 
   # Security & Alerts
   - name: "Security"
-    order: 7
     summary_prompt: "Summarize this security notification focusing on the nature of the alert, affected systems, and required actions."
     criteria:
       from_patterns:
@@ -118,7 +111,6 @@ categories:
 
   # Personal Email (catch-all)
   - name: "Personal"
-    order: 99
     summary_prompt: "Provide a brief, friendly summary of this personal email."
     criteria: {}  # Empty criteria = catch-all for remaining emails
 

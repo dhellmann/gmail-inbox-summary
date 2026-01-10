@@ -12,7 +12,6 @@ def test_thread_processor_initialization() -> None:
     config.get_categories.return_value = [
         {
             "name": "Test Category",
-            "order": 1,
             "criteria": {"labels": ["IMPORTANT"]},
             "summary_prompt": "Test prompt",
         }
@@ -32,7 +31,6 @@ def test_categorize_thread_with_label_match() -> None:
     config.get_categories.return_value = [
         {
             "name": "Important",
-            "order": 1,
             "criteria": {"labels": ["IMPORTANT"]},
             "summary_prompt": "Test prompt",
         }
@@ -63,7 +61,6 @@ def test_categorize_thread_with_from_pattern_match() -> None:
     config.get_categories.return_value = [
         {
             "name": "Jira",
-            "order": 1,
             "criteria": {"from_patterns": ["jira@.*"]},
             "summary_prompt": "Test prompt",
         }
@@ -94,7 +91,6 @@ def test_categorize_thread_no_match() -> None:
     config.get_categories.return_value = [
         {
             "name": "Important",
-            "order": 1,
             "criteria": {"labels": ["IMPORTANT"]},
             "summary_prompt": "Test prompt",
         }
@@ -184,13 +180,11 @@ def test_process_threads() -> None:
     config.get_categories.return_value = [
         {
             "name": "Important",
-            "order": 1,
             "criteria": {"labels": ["IMPORTANT"]},
             "summary_prompt": "Test prompt",
         },
         {
             "name": "Everything Else",
-            "order": 999,
             "criteria": {},
             "summary_prompt": "Default prompt",
         },

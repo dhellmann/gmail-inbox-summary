@@ -125,8 +125,10 @@ def main(
             task = progress.add_task("Initializing Gmail client...", total=1)
             gmail_config = app_config.get_gmail_config()
             gmail_client = GmailClient(
-                credentials_path=gmail_config.get("credentials_file", "credentials.json"),
-                token_path=gmail_config.get("token_file", "token.json")
+                credentials_path=gmail_config.get(
+                    "credentials_file", "credentials.json"
+                ),
+                token_path=gmail_config.get("token_file", "token.json"),
             )
             progress.advance(task)
 

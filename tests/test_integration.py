@@ -27,14 +27,12 @@ claude:
 
 categories:
   - name: "Work"
-    order: 1
     summary_prompt: "Summarize this work-related email thread."
     criteria:
       from_patterns:
         - ".*@company\\\\.com"
 
   - name: "Personal"
-    order: 2
     summary_prompt: "Summarize this personal email thread."
     criteria: {}
 

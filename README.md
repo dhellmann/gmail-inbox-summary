@@ -58,7 +58,6 @@ claude:
 # Thread Categories (customize as needed)
 categories:
   - name: "Work Email"
-    order: 1
     summary_prompt: "Summarize this work-related email focusing on action items, decisions, and deadlines."
     criteria:
       from_patterns:
@@ -68,8 +67,7 @@ categories:
         - "\\[PROJECT\\]"
         - "Meeting:"
 
-  - name: "GitHub Notifications" 
-    order: 2
+  - name: "GitHub Notifications"
     summary_prompt: "Summarize this GitHub notification, focusing on PR status, issues, and code changes."
     criteria:
       from_patterns:
@@ -79,7 +77,6 @@ categories:
         - "\\[.*\\].*Issue"
 
   - name: "Personal"
-    order: 99
     summary_prompt: "Provide a brief, friendly summary of this personal email."
     criteria: {}  # Catch-all for remaining emails
 
@@ -132,12 +129,11 @@ claude:
 
 ### Category Configuration
 
-Categories define how threads are organized and summarized. Each category supports:
+Categories define how threads are organized and summarized. Categories are processed in the order they appear in the configuration file - the first matching category wins. Each category supports:
 
 ```yaml
 categories:
   - name: "Category Name"           # Display name
-    order: 1                       # Sort order (lower = higher priority)
     summary_prompt: "Custom prompt for this category"
     criteria:
       # Match sender email patterns

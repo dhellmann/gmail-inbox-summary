@@ -44,8 +44,8 @@ def test_template_context_preparation() -> None:
     """Test template context preparation."""
     config = Mock(spec=Config)
     config.get_categories.return_value = [
-        {"name": "Work", "order": 1},
-        {"name": "Personal", "order": 2},
+        {"name": "Work"},
+        {"name": "Personal"},
     ]
     config.get_max_threads_per_category.return_value = 10
     config.get_important_senders.return_value = ["boss@company.com"]
@@ -106,7 +106,7 @@ def test_generate_html_report() -> None:
     """Test HTML report generation."""
     config = Mock(spec=Config)
     config.get_output_filename.return_value = "test_output.html"
-    config.get_categories.return_value = [{"name": "Test", "order": 1}]
+    config.get_categories.return_value = [{"name": "Test"}]
     config.get_max_threads_per_category.return_value = 10
     config.get_important_senders.return_value = []
 
