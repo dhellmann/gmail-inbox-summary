@@ -46,28 +46,22 @@ gmail-summary --help
 - Python 3.12 or higher
 - pip package manager
 
-### 2. Gmail API Setup
+### 2. Gmail Setup
 
-1. **Google Cloud Project Setup:**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-   - Enable the Gmail API in the API Library
+1. **Enable Gmail IMAP:**
+   - Open Gmail in your browser
+   - Go to Settings (gear icon) → "See all settings"
+   - Navigate to "Forwarding and POP/IMAP" tab
+   - Under "IMAP access", select "Enable IMAP"
+   - Save changes
 
-2. **OAuth2 Credentials:**
-   - Go to "Credentials" in the sidebar
-   - Click "Create Credentials" → "OAuth 2.0 Client IDs"
-   - Choose "Desktop application"
-   - Download the JSON file as `credentials.json`
-   - Place it in your project directory
-
-3. **First-time Authentication:**
-   ```bash
-   # Run any command - it will trigger OAuth flow
-   gmail-summary --test-claude
-   ```
-   - Browser will open for Google authentication
-   - Grant permissions to access Gmail
-   - `token.json` will be created automatically
+2. **Create App-Specific Password (Recommended):**
+   - Go to your [Google Account settings](https://myaccount.google.com/)
+   - Navigate to Security → 2-Step Verification
+   - If not enabled, set up 2-Step Verification first
+   - Under "Signing in to Google", click "App passwords"
+   - Select "Mail" as the app and generate password
+   - Copy the generated password (you'll need it for configuration)
 
 ### 3. Claude Code CLI Setup
 
@@ -101,7 +95,14 @@ gmail-summary --help
    code config.yaml
    ```
 
-3. **Customize Categories:**
+3. **Update Gmail Credentials:**
+   ```yaml
+   gmail:
+     email_address: "your.email@gmail.com"      # Your Gmail address
+     password: "your-app-specific-password"     # App password from step 2
+   ```
+
+4. **Customize Categories:**
    - Modify email patterns to match your inbox
    - Adjust summary prompts for your needs
    - Set appropriate output file location

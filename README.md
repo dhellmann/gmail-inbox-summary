@@ -40,15 +40,26 @@ Before using the application, you need:
 2. Authenticate: `claude auth`
 3. Test connection: `gmail-summary --test-claude`
 
-### 3. Configuration
+### 3. Gmail Setup
+
+1. **Enable Gmail IMAP** (if not already enabled):
+   - Go to Gmail Settings → Forwarding and POP/IMAP
+   - Enable IMAP access
+
+2. **Create App-Specific Password** (recommended for security):
+   - Go to your Google Account settings
+   - Navigate to Security → 2-Step Verification → App passwords
+   - Generate a password for "Mail"
+
+### 4. Configuration
 
 Create a configuration file `config.yaml`:
 
 ```yaml
-# Gmail API Configuration
+# Gmail IMAP Configuration
 gmail:
-  credentials_file: "credentials.json"
-  token_file: "token.json"
+  email_address: "your.email@gmail.com"
+  password: "your-app-specific-password"
 
 # Claude Code CLI Configuration  
 claude:

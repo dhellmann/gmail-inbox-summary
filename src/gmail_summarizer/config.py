@@ -72,9 +72,10 @@ class Config:
         """Create default settings configuration."""
         self.settings = {
             "gmail": {
-                "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
-                "credentials_file": "credentials.json",
-                "token_file": "token.json",
+                "email_address": "your.email@gmail.com",
+                "password": "your-app-specific-password",
+                "imap_server": "imap.gmail.com",
+                "imap_port": 993,
             },
             "claude": {"cli_path": "claude", "timeout": 30},
             "highlighting": {"important_senders": []},

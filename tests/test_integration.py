@@ -18,8 +18,8 @@ def sample_config_file() -> Path:
     """Create a temporary configuration file for testing."""
     config_content = """
 gmail:
-  credentials_file: "test_credentials.json"
-  token_file: "test_token.json"
+  email_address: "test@gmail.com"
+  password: "test-password"
 
 claude:
   cli_path: "claude"
@@ -105,7 +105,7 @@ def test_cli_invalid_config() -> None:
     assert result.exit_code != 0
 
 
-@patch("gmail_summarizer.main.GmailClient")
+@patch("gmail_summarizer.main.ImapGmailClient")
 @patch("gmail_summarizer.main.LLMSummarizer")
 def test_cli_dry_run(
     mock_llm_summarizer: Mock,
@@ -135,7 +135,7 @@ def test_cli_dry_run(
         mock_llm_summarizer.assert_not_called()
 
 
-@patch("gmail_summarizer.main.GmailClient")
+@patch("gmail_summarizer.main.ImapGmailClient")
 @patch("gmail_summarizer.main.LLMSummarizer")
 def test_cli_test_claude(
     mock_llm_summarizer: Mock,
@@ -156,7 +156,7 @@ def test_cli_test_claude(
     mock_summarizer.test_cli_connection.assert_called_once()
 
 
-@patch("gmail_summarizer.main.GmailClient")
+@patch("gmail_summarizer.main.ImapGmailClient")
 @patch("gmail_summarizer.main.LLMSummarizer")
 @patch("gmail_summarizer.main.HTMLGenerator")
 def test_full_workflow_integration(
@@ -251,7 +251,7 @@ def test_cli_with_output_override(sample_config_file: Path) -> None:
     runner = CliRunner()
 
     with (
-        patch("gmail_summarizer.main.GmailClient") as mock_gmail_client,
+        patch("gmail_summarizer.main.ImapGmailClient") as mock_gmail_client,
         patch("gmail_summarizer.main.LLMSummarizer") as mock_llm_summarizer,
         patch("gmail_summarizer.main.HTMLGenerator") as mock_html_generator,
     ):

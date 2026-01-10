@@ -13,8 +13,8 @@ from rich.progress import TextColumn
 from rich.table import Table
 
 from .config import Config
-from .gmail_client import GmailClient
 from .html_generator import HTMLGenerator
+from .imap_gmail_client import ImapGmailClient
 from .llm_summarizer import LLMSummarizer
 from .thread_processor import ThreadProcessor
 
@@ -116,118 +116,141 @@ def main(
                 raise click.Abort()
 
         # Initialize components
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            # Gmail client
-            task = progress.add_task("Initializing Gmail client...", total=1)
-            gmail_config = app_config.get_gmail_config()
-            gmail_client = GmailClient(
-                credentials_path=gmail_config.get(
-                    "credentials_file", "credentials.json"
-                ),
-                token_path=gmail_config.get("token_file", "token.json"),
-            )
-            progress.advance(task)
+        gmail_client = None
+        try:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                # Gmail client
+                task = progress.add_task("Connecting to Gmail via IMAP...", total=1)
+                gmail_config = app_config.get_gmail_config()
 
-            # Thread processor
-            task = progress.add_task("Setting up thread processor...", total=1)
-            processor = ThreadProcessor(app_config)
-            progress.advance(task)
+                # Check for required IMAP credentials
+                email_address = gmail_config.get("email_address")
+                password = gmail_config.get("password")
 
-            # LLM summarizer (skip if dry run)
-            if not dry_run:
-                task = progress.add_task("Testing Claude CLI connection...", total=1)
-                summarizer = LLMSummarizer(app_config)
-                if not summarizer.test_cli_connection():
-                    console.print("[red]Error: Claude CLI not available[/red]")
+                if not email_address or not password:
+                    console.print("[red]Error: Gmail credentials not configured[/red]")
+                    console.print(
+                        "Please set email_address and password in your config file"
+                    )
                     raise click.Abort()
+
+                gmail_client = ImapGmailClient(
+                    email_address=email_address,
+                    password=password,
+                    imap_server=gmail_config.get("imap_server", "imap.gmail.com"),
+                    imap_port=gmail_config.get("imap_port", 993),
+                )
                 progress.advance(task)
 
-            # HTML generator
-            task = progress.add_task("Setting up HTML generator...", total=1)
-            html_generator = HTMLGenerator(app_config)
-            progress.advance(task)
+                # Thread processor
+                task = progress.add_task("Setting up thread processor...", total=1)
+                processor = ThreadProcessor(app_config)
+                progress.advance(task)
 
-        console.print("[green]✓ All components initialized successfully[/green]")
+                # LLM summarizer (skip if dry run)
+                if not dry_run:
+                    task = progress.add_task(
+                        "Testing Claude CLI connection...", total=1
+                    )
+                    summarizer = LLMSummarizer(app_config)
+                    if not summarizer.test_cli_connection():
+                        console.print("[red]Error: Claude CLI not available[/red]")
+                        raise click.Abort()
+                    progress.advance(task)
 
-        # Fetch and process threads
-        console.print("\n[yellow]Fetching Gmail threads...[/yellow]")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Fetching inbox threads...", total=None)
+                # HTML generator
+                task = progress.add_task("Setting up HTML generator...", total=1)
+                html_generator = HTMLGenerator(app_config)
+                progress.advance(task)
 
-            # Get threads data
-            threads_data = []
-            for thread in gmail_client.get_inbox_threads():
-                messages = gmail_client.get_thread_messages(thread["id"])
-                threads_data.append((thread, messages))
-                progress.update(
-                    task, description=f"Fetched {len(threads_data)} threads..."
+            console.print("[green]✓ All components initialized successfully[/green]")
+
+            # Fetch and process threads
+            console.print("\n[yellow]Fetching Gmail threads...[/yellow]")
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Fetching inbox threads...", total=None)
+
+                # Get threads data
+                threads_data = []
+                for thread in gmail_client.get_inbox_threads():
+                    messages = gmail_client.get_thread_messages(thread["id"])
+                    threads_data.append((thread, messages))
+                    progress.update(
+                        task, description=f"Fetched {len(threads_data)} threads..."
+                    )
+
+                    # Stop if we have enough for testing
+                    if len(threads_data) >= 100:  # Reasonable limit for testing
+                        break
+
+            console.print(f"[green]✓ Fetched {len(threads_data)} threads[/green]")
+
+            # Process and categorize threads
+            console.print("\n[yellow]Categorizing threads...[/yellow]")
+            categorized_threads = processor.process_threads(threads_data)
+
+            # Display categorization summary
+            _display_categorization_summary(categorized_threads)
+
+            if dry_run:
+                console.print(
+                    "\n[yellow]Dry run complete - skipping summarization[/yellow]"
                 )
+                return
 
-                # Stop if we have enough for testing
-                if len(threads_data) >= 100:  # Reasonable limit for testing
-                    break
+            # Generate summaries
+            console.print("\n[yellow]Generating AI summaries...[/yellow]")
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                total_threads = sum(
+                    len(threads) for threads in categorized_threads.values()
+                )
+                task = progress.add_task("Generating summaries...", total=total_threads)
 
-        console.print(f"[green]✓ Fetched {len(threads_data)} threads[/green]")
+                summarized_threads = summarizer.summarize_threads_batch(
+                    categorized_threads
+                )
+                progress.advance(task, advance=total_threads)
 
-        # Process and categorize threads
-        console.print("\n[yellow]Categorizing threads...[/yellow]")
-        categorized_threads = processor.process_threads(threads_data)
+            # Generate statistics
+            stats = summarizer.get_summarization_stats(summarized_threads)
+            _display_summarization_stats(stats)
 
-        # Display categorization summary
-        _display_categorization_summary(categorized_threads)
+            # Generate HTML report
+            console.print("\n[yellow]Generating HTML report...[/yellow]")
+            output_path = output or app_config.get_output_filename()
+            html_file = html_generator.generate_html_report(
+                summarized_threads, stats, str(output_path)
+            )
 
-        if dry_run:
+            # Success message
             console.print(
-                "\n[yellow]Dry run complete - skipping summarization[/yellow]"
+                Panel(
+                    f"[green]✓ Gmail inbox summary generated successfully![/green]\n\n"
+                    f"📧 Processed: {stats['total_threads']} threads\n"
+                    f"✨ Summarized: {stats['successful_summaries']} threads\n"
+                    f"📄 Report: {html_file}\n\n"
+                    f"[dim]Open the HTML file in your browser to view the summary.[/dim]",
+                    title="Summary Complete",
+                    border_style="green",
+                )
             )
-            return
 
-        # Generate summaries
-        console.print("\n[yellow]Generating AI summaries...[/yellow]")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            total_threads = sum(
-                len(threads) for threads in categorized_threads.values()
-            )
-            task = progress.add_task("Generating summaries...", total=total_threads)
-
-            summarized_threads = summarizer.summarize_threads_batch(categorized_threads)
-            progress.advance(task, advance=total_threads)
-
-        # Generate statistics
-        stats = summarizer.get_summarization_stats(summarized_threads)
-        _display_summarization_stats(stats)
-
-        # Generate HTML report
-        console.print("\n[yellow]Generating HTML report...[/yellow]")
-        output_path = output or app_config.get_output_filename()
-        html_file = html_generator.generate_html_report(
-            summarized_threads, stats, str(output_path)
-        )
-
-        # Success message
-        console.print(
-            Panel(
-                f"[green]✓ Gmail inbox summary generated successfully![/green]\n\n"
-                f"📧 Processed: {stats['total_threads']} threads\n"
-                f"✨ Summarized: {stats['successful_summaries']} threads\n"
-                f"📄 Report: {html_file}\n\n"
-                f"[dim]Open the HTML file in your browser to view the summary.[/dim]",
-                title="Summary Complete",
-                border_style="green",
-            )
-        )
+        finally:
+            # Ensure Gmail client connection is closed
+            if gmail_client:
+                gmail_client.close()
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user[/yellow]")

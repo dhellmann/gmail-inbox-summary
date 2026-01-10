@@ -81,6 +81,31 @@ gmail-inbox-summary/
 3. Create CLI interface in `main.py` with click/typer
 4. Commit the changes.
 
+### Phase 5.5: IMAP Migration for Simplified Authentication
+
+1. Implement `imap_gmail_client.py` with IMAP-based Gmail access:
+   - Replace Gmail API with Python's built-in `imaplib` and `email` modules
+   - Support username/password and app-specific password authentication
+   - Maintain same interface as current `GmailClient` for seamless integration
+   - Handle Gmail's IMAP quirks (X-GM-THRID for thread grouping)
+   - Implement efficient message parsing and thread reconstruction
+2. Update configuration system:
+   - Replace OAuth2 credentials with simple email credentials
+   - Add support for app-specific passwords (recommended for security)
+   - Maintain backward compatibility during transition period
+3. Remove Google API dependencies:
+   - Update `pyproject.toml` to remove `google-api-python-client`, `google-auth-httplib2`, `google-auth-oauthlib`
+   - Significantly reduce package size and installation complexity
+4. Update documentation:
+   - Simplify installation instructions (remove Google Cloud Console setup)
+   - Add Gmail app-specific password setup guide
+   - Provide migration guide for existing API users
+5. Enhanced features:
+   - Add support for other IMAP email providers beyond Gmail
+   - Improve connection handling with automatic reconnection
+   - Better error messages for authentication issues
+6. Commit the changes.
+
 ### Phase 6: Testing & Quality Assurance
 
 1. Implement comprehensive test suite with pytest
