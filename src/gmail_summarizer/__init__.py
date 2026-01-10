@@ -5,6 +5,6 @@ try:
 except ImportError:
     __version__ = "unknown"
 
-from .main import main
+from .main import cli
 
-__all__ = ["__version__", "main"]
+__all__ = ["__version__", "cli"]

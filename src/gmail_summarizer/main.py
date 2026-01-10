@@ -10,9 +10,11 @@ from rich.panel import Panel
 from rich.progress import Progress
 from rich.progress import SpinnerColumn
 from rich.progress import TextColumn
+from rich.prompt import Prompt
 from rich.table import Table
 
 from .config import Config
+from .credential_manager import CredentialManager
 from .html_generator import HTMLGenerator
 from .imap_gmail_client import ImapGmailClient
 from .llm_summarizer import LLMSummarizer
@@ -38,7 +40,83 @@ def setup_logging(verbose: bool = False) -> None:
     logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
 
-@click.command()
+@click.group()
+@click.version_option()
+def cli() -> None:
+    """Generate AI-powered summaries of Gmail inbox threads.
+
+    This tool reads your Gmail inbox, categorizes threads based on configurable
+    criteria, generates AI summaries using Claude Code CLI, and outputs a
+    beautiful HTML report.
+
+    Before running, ensure you have:
+    1. Set up Gmail IMAP access and stored credentials securely
+    2. Installed Claude Code CLI and authenticated
+    3. Configured categories in config.yaml
+    """
+    pass
+
+
+@cli.group()
+def creds() -> None:
+    """Manage Gmail credentials in keychain."""
+    pass
+
+
+@creds.command()
+@click.option("--email", "-e", help="Gmail email address")
+@click.option(
+    "--update",
+    is_flag=True,
+    help="Update existing credentials",
+)
+def store(email: str | None, update: bool) -> None:
+    """Store Gmail credentials in keychain."""
+    credential_manager = CredentialManager()
+
+    if not email:
+        email = Prompt.ask("[cyan]Gmail email address[/cyan]")
+
+    if not email:
+        console.print("[red]Email address is required[/red]")
+        raise click.Abort()
+
+    # Get password
+    console.print("\n[cyan]Gmail password or app-specific password:[/cyan]")
+    console.print(
+        "[dim]App-specific passwords are recommended for better security[/dim]"
+    )
+    console.print("[dim]Create one at: https://myaccount.google.com/apppasswords[/dim]")
+
+    password = Prompt.ask("[cyan]Password[/cyan]", password=True)
+
+    if not password:
+        console.print("[red]Password is required[/red]")
+        raise click.Abort()
+
+    success = credential_manager.store_credentials(email, password, update)
+    if not success:
+        raise click.Abort()
+
+
+@creds.command()
+@click.argument("email")
+def check(email: str) -> None:
+    """Check if credentials exist for an email address."""
+    credential_manager = CredentialManager()
+    credential_manager.check_credentials(email)
+
+
+@creds.command()
+@click.argument("email")
+def delete(email: str) -> None:
+    """Delete credentials from keychain."""
+    credential_manager = CredentialManager()
+    if not credential_manager.delete_credentials(email):
+        raise click.Abort()
+
+
+@cli.command()
 @click.option(
     "--config",
     "-c",
@@ -74,7 +152,7 @@ def setup_logging(verbose: bool = False) -> None:
     is_flag=True,
     help="Test Claude CLI connection and exit",
 )
-def main(
+def run(
     config: Path,
     output: Path | None,
     max_threads: int | None,
@@ -84,14 +162,8 @@ def main(
 ) -> None:
     """Generate AI-powered summaries of Gmail inbox threads.
 
-    This tool reads your Gmail inbox, categorizes threads based on configurable
-    criteria, generates AI summaries using Claude Code CLI, and outputs a
-    beautiful HTML report.
-
-    Before running, ensure you have:
-    1. Created credentials.json from Google Cloud Console
-    2. Installed Claude Code CLI and authenticated
-    3. Configured categories in config.yaml
+    Process your Gmail inbox and create an HTML summary report with AI-generated
+    thread summaries organized by categories.
     """
     setup_logging(verbose)
 
@@ -127,16 +199,44 @@ def main(
                 task = progress.add_task("Connecting to Gmail via IMAP...", total=1)
                 gmail_config = app_config.get_gmail_config()
 
-                # Check for required IMAP credentials
+                # Get credentials from keychain or config
+                credential_manager = CredentialManager()
                 email_address = gmail_config.get("email_address")
-                password = gmail_config.get("password")
 
-                if not email_address or not password:
-                    console.print("[red]Error: Gmail credentials not configured[/red]")
-                    console.print(
-                        "Please set email_address and password in your config file"
-                    )
-                    raise click.Abort()
+                # Try keychain first, fall back to config for backward compatibility
+                credentials = None
+                if email_address:
+                    credentials = credential_manager.get_credentials(email_address)
+
+                if not credentials:
+                    # Fall back to config file credentials (legacy)
+                    config_email = gmail_config.get("email_address")
+                    config_password = gmail_config.get("password")
+
+                    if config_email and config_password:
+                        console.print(
+                            "[yellow]Warning: Using credentials from config file[/yellow]"
+                        )
+                        console.print(
+                            "[yellow]Consider storing them securely: gmail-summary creds store[/yellow]"
+                        )
+                        credentials = (config_email, config_password)
+                    else:
+                        console.print("[red]Error: Gmail credentials not found[/red]")
+                        console.print(
+                            "Store credentials securely: [cyan]gmail-summary creds store[/cyan]"
+                        )
+                        console.print(
+                            "Or set email_address in config and store password in keychain"
+                        )
+                        raise click.Abort()
+
+                # Handle both credential sources
+                if isinstance(credentials, tuple):
+                    email_address, password = credentials
+                else:
+                    email_address = credentials.email_address
+                    password = credentials.password
 
                 gmail_client = ImapGmailClient(
                     email_address=email_address,
@@ -318,4 +418,4 @@ def _display_summarization_stats(stats: dict) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    cli()

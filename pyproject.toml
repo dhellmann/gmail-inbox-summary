@@ -26,6 +26,7 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "click>=8.0.0",
     "rich>=13.0.0",
+    "keyring>=24.0.0",
 ]
 
 [project.optional-dependencies]
@@ -44,7 +45,7 @@ Issues = "https://github.com/dhellmann/gmail-inbox-summary/issues"
 Source = "https://github.com/dhellmann/gmail-inbox-summary"
 
 [project.scripts]
-gmail-summary = "gmail_summarizer.main:main"
+gmail-summary = "gmail_summarizer.main:cli"
 
 [tool.hatch.version]
 source = "vcs"

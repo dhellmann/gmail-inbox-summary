@@ -2,14 +2,17 @@
 
 A Python application that generates AI-powered summaries of Gmail inbox threads using configurable categorization and Claude Code CLI integration.
 
+> **🔒 Security Enhancement**: This application uses secure keychain storage for Gmail credentials. Your credentials are protected using your system's native credential manager (macOS Keychain, Windows Credential Manager, or Linux Secret Service).
+>
 ## Features
 
 - **🤖 AI-Powered Summaries**: Uses Claude Code CLI to generate intelligent, context-aware summaries
-- **📧 Gmail Integration**: Secure OAuth2 authentication with Gmail API for inbox access
+- **📧 Gmail Integration**: Secure IMAP access with keychain credential storage for inbox access
 - **⚙️ Configurable Categories**: Define custom thread categories with flexible regex-based matching
 - **📊 Rich HTML Reports**: Beautiful, responsive HTML output with statistics and collapsible sections
 - **💻 Modern CLI**: Rich command-line interface with progress indicators and colored output
 - **🔧 Flexible Configuration**: Support for both unified YAML config files and modular configurations
+- **🔒 Secure Credentials**: Cross-platform keychain storage for Gmail passwords with system integration
 - **🧪 Comprehensive Testing**: Full test coverage with unit and integration tests
 
 ## Quick Start
@@ -28,19 +31,7 @@ pip install git+https://github.com/dhellmann/gmail-inbox-summary.git
 
 Before using the application, you need:
 
-#### Gmail API Credentials
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable the Gmail API
-4. Create OAuth 2.0 credentials (Desktop application)
-5. Download the credentials file as `credentials.json`
-
-#### Claude Code CLI
-1. Install Claude Code CLI: [Installation Instructions](https://claude.ai/code)
-2. Authenticate: `claude auth`
-3. Test connection: `gmail-summary --test-claude`
-
-### 3. Gmail Setup
+#### Gmail IMAP Access
 
 1. **Enable Gmail IMAP** (if not already enabled):
    - Go to Gmail Settings → Forwarding and POP/IMAP
@@ -51,17 +42,32 @@ Before using the application, you need:
    - Navigate to Security → 2-Step Verification → App passwords
    - Generate a password for "Mail"
 
-### 4. Configuration
+3. **Store Credentials Securely**:
+
+   ```bash
+   gmail-summary creds store --email your.email@gmail.com
+   ```
+
+   This will prompt for your password and store it securely in your system keychain.
+
+#### Claude Code CLI
+
+1. Install Claude Code CLI: [Installation Instructions](https://claude.ai/code)
+2. Authenticate: `claude auth`
+3. Test connection: `gmail-summary run --test-claude`
+
+### 3. Configuration
 
 Create a configuration file `config.yaml`:
 
 ```yaml
 # Gmail IMAP Configuration
 gmail:
-  email_address: "your.email@gmail.com"
-  password: "your-app-specific-password"
+  email_address: "your.email@gmail.com"  # Email stored in keychain
+  imap_server: "imap.gmail.com"          # Optional, defaults to imap.gmail.com
+  imap_port: 993                         # Optional, defaults to 993
 
-# Claude Code CLI Configuration  
+# Claude Code CLI Configuration
 claude:
   cli_path: "claude"
   timeout: 30
@@ -104,20 +110,39 @@ max_threads_per_category: 20
 ### 4. Basic Usage
 
 ```bash
+# Store credentials securely (first time setup)
+gmail-summary creds store --email your.email@gmail.com
+
 # Test Claude CLI connection
-gmail-summary --test-claude
+gmail-summary run --test-claude
 
 # Generate summary (dry run to test configuration)
-gmail-summary --dry-run --verbose
+gmail-summary run --dry-run --verbose
 
 # Generate full HTML report
-gmail-summary --config config.yaml
+gmail-summary run --config config.yaml
 
 # Customize output location
-gmail-summary --output my_summary.html
+gmail-summary run --output my_summary.html
 
 # Limit threads per category
-gmail-summary --max-threads 10
+gmail-summary run --max-threads 10
+```
+
+### Credential Management
+
+```bash
+# Store new credentials
+gmail-summary creds store --email your.email@gmail.com
+
+# Update existing credentials
+gmail-summary creds store --email your.email@gmail.com --update
+
+# Check if credentials exist
+gmail-summary creds check your.email@gmail.com
+
+# Delete stored credentials
+gmail-summary creds delete your.email@gmail.com
 ```
 
 ## Configuration Guide
@@ -126,9 +151,15 @@ gmail-summary --max-threads 10
 
 ```yaml
 gmail:
-  credentials_file: "path/to/credentials.json"  # OAuth2 credentials from Google Cloud Console
-  token_file: "token.json"                     # Where to store authentication tokens
+  email_address: "your.email@gmail.com"  # Required: Gmail address (password stored in keychain)
+  imap_server: "imap.gmail.com"          # Optional: IMAP server (default: imap.gmail.com)
+  imap_port: 993                         # Optional: IMAP port (default: 993 for SSL)
+
+  # Legacy support (not recommended - use keychain instead)
+  password: "your-app-password"          # Will warn users to use keychain storage
 ```
+
+**Security Note**: Store passwords in the system keychain using `gmail-summary creds store` instead of putting them in configuration files.
 
 ### Claude Configuration
 
@@ -151,24 +182,24 @@ categories:
       from_patterns:
         - ".*@domain\\.com"
         - "noreply@service\\.net"
-      
-      # Match recipient patterns  
+
+      # Match recipient patterns
       to_patterns:
         - "team@company\\.com"
-      
+
       # Match subject line patterns
       subject_patterns:
         - "\\[ALERT\\]"
         - "Daily Report:"
-      
+
       # Match message content
       content_patterns:
         - "invoice.*attached"
-      
+
       # Match custom headers
       headers:
         "List-Id": ".*@lists\\.domain\\.com"
-      
+
       # Match Gmail labels
       labels:
         - "IMPORTANT"
@@ -176,6 +207,7 @@ categories:
 ```
 
 **Pattern Matching:**
+
 - Use regex patterns with proper escaping: `\\.` for literal dots
 - Patterns are case-insensitive by default
 - Empty criteria `{}` creates a catch-all category
@@ -201,38 +233,72 @@ gmail:
 ## Command Line Reference
 
 ```
-Usage: gmail-summary [OPTIONS]
+Usage: gmail-summary [OPTIONS] COMMAND [ARGS]...
 
 Generate AI-powered summaries of Gmail inbox threads.
 
-Options:
-  -c, --config PATH       Configuration file path (default: config.yaml)
-  -o, --output PATH       Output HTML file path (overrides config)
-  -n, --max-threads INT  Maximum threads per category (overrides config)
-  --dry-run              Process threads without generating summaries
-  --test-claude          Test Claude CLI connection and exit
-  -v, --verbose          Enable verbose logging
-  --help                 Show this message and exit
+Commands:
+  creds  Manage Gmail credentials in keychain.
+  run    Generate AI-powered summaries of Gmail inbox threads.
+
+Main Command:
+  gmail-summary run [OPTIONS]
+
+  Options:
+    -c, --config PATH       Configuration file path (default: config.yaml)
+    -o, --output PATH       Output HTML file path (overrides config)
+    -n, --max-threads INT  Maximum threads per category (overrides config)
+    --dry-run              Process threads without generating summaries
+    --test-claude          Test Claude CLI connection and exit
+    -v, --verbose          Enable verbose logging
+    --help                 Show this message and exit
+
+Credential Management:
+  gmail-summary creds store [OPTIONS]
+    -e, --email TEXT       Gmail email address
+    --update              Update existing credentials
+
+  gmail-summary creds check <EMAIL>     # Check if credentials exist
+  gmail-summary creds delete <EMAIL>    # Delete stored credentials
 ```
 
 ## Example Workflows
 
 ### Daily Email Summary
+
 ```bash
 # Morning routine: generate yesterday's email summary
-gmail-summary --config daily_config.yaml --output "summaries/$(date +%Y%m%d).html"
+gmail-summary run --config daily_config.yaml --output "summaries/$(date +%Y%m%d).html"
 ```
 
-### Weekly Team Review  
+### Weekly Team Review
+
 ```bash
 # Generate summary for team review with more threads
-gmail-summary --max-threads 50 --output weekly_team_summary.html
+gmail-summary run --max-threads 50 --output weekly_team_summary.html
 ```
 
 ### Testing New Configuration
+
 ```bash
-# Test configuration changes without API calls
-gmail-summary --config new_config.yaml --dry-run --verbose
+# Test configuration changes without generating summaries
+gmail-summary run --config new_config.yaml --dry-run --verbose
+```
+
+### First-Time Setup Workflow
+
+```bash
+# 1. Store credentials securely
+gmail-summary creds store --email your.email@gmail.com
+
+# 2. Test Claude CLI connection
+gmail-summary run --test-claude
+
+# 3. Test configuration with dry run
+gmail-summary run --dry-run --verbose
+
+# 4. Generate actual summary
+gmail-summary run
 ```
 
 ## HTML Report Features
@@ -240,7 +306,7 @@ gmail-summary --config new_config.yaml --dry-run --verbose
 The generated HTML reports include:
 
 - **📊 Statistics Dashboard**: Thread counts, summary success rates, processing time
-- **🗂️ Collapsible Categories**: Organized sections with expand/collapse functionality  
+- **🗂️ Collapsible Categories**: Organized sections with expand/collapse functionality
 - **⭐ Priority Highlighting**: Important senders marked with visual indicators
 - **📱 Responsive Design**: Mobile-friendly layout that works on all devices
 - **🖨️ Print-Friendly**: Clean formatting when printed or saved as PDF
@@ -253,12 +319,13 @@ The generated HTML reports include:
 ```
 gmail-inbox-summary/
 ├── src/gmail_summarizer/
-│   ├── config.py           # Configuration management
-│   ├── gmail_client.py     # Gmail API integration
-│   ├── thread_processor.py # Thread categorization
-│   ├── llm_summarizer.py   # Claude CLI integration
-│   ├── html_generator.py   # HTML report generation
-│   └── main.py            # CLI interface
+│   ├── config.py              # Configuration management
+│   ├── imap_gmail_client.py   # Gmail IMAP integration
+│   ├── credential_manager.py  # Secure keychain credential storage
+│   ├── thread_processor.py    # Thread categorization
+│   ├── llm_summarizer.py      # Claude CLI integration
+│   ├── html_generator.py      # HTML report generation
+│   └── main.py               # CLI interface
 ├── templates/
 │   └── summary.html       # Jinja2 HTML template
 ├── tests/                 # Comprehensive test suite
@@ -304,33 +371,42 @@ hatch run pre-commit run --all-files
 ### Common Issues
 
 **Gmail Authentication Errors:**
+
 ```
-Error: Failed to authenticate with Gmail API
+Error: Gmail credentials not found
 ```
-- Ensure `credentials.json` exists and is valid
-- Check that Gmail API is enabled in Google Cloud Console
-- Delete `token.json` to force re-authentication
+
+- Store credentials: `gmail-summary creds store --email your.email@gmail.com`
+- Ensure Gmail IMAP is enabled in your Gmail settings
+- Use app-specific password, not your regular Gmail password
+- Check stored credentials: `gmail-summary creds check your.email@gmail.com`
 
 **Claude CLI Connection Issues:**
+
 ```
 Error: Claude CLI not available
 ```
+
 - Install Claude Code CLI: [Installation Guide](https://claude.ai/code)
 - Authenticate: `claude auth`
 - Check path: `which claude`
 
 **Configuration Syntax Errors:**
+
 ```
 Error: Invalid YAML syntax
 ```
+
 - Validate YAML syntax with online tools
 - Check regex pattern escaping: use `\\.` for literal dots
 - Ensure proper indentation (spaces, not tabs)
 
 **No Threads Found:**
+
 ```
 Warning: No threads matched any category
 ```
+
 - Check Gmail label filters
 - Verify regex patterns with test data
 - Add a catch-all category with empty criteria: `criteria: {}`
@@ -338,11 +414,13 @@ Warning: No threads matched any category
 ### Debug Mode
 
 Enable detailed logging:
+
 ```bash
-gmail-summary --verbose --config config.yaml --dry-run
+gmail-summary run --verbose --config config.yaml --dry-run
 ```
 
 This shows:
+
 - Configuration loading details
 - Thread categorization process
 - Pattern matching results
@@ -365,6 +443,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - Submitting pull requests
 
 Quick start for contributors:
+
 ```bash
 git clone https://github.com/YOUR-USERNAME/gmail-inbox-summary.git
 cd gmail-inbox-summary

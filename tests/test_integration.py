@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from gmail_summarizer.config import Config
-from gmail_summarizer.main import main
+from gmail_summarizer.main import cli
 
 
 @pytest.fixture
@@ -91,17 +91,16 @@ def sample_threads_data() -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
 def test_cli_help() -> None:
     """Test that CLI help works correctly."""
     runner = CliRunner()
-    result = runner.invoke(main, ["--help"])
+    result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
     assert "Generate AI-powered summaries" in result.output
-    assert "--config" in result.output
-    assert "--output" in result.output
+    assert "Commands:" in result.output
 
 
 def test_cli_invalid_config() -> None:
     """Test CLI behavior with invalid config file."""
     runner = CliRunner()
-    result = runner.invoke(main, ["--config", "nonexistent.yaml"])
+    result = runner.invoke(cli, ["run", "--config", "nonexistent.yaml"])
     assert result.exit_code != 0
 
 
@@ -125,7 +124,7 @@ def test_cli_dry_run(
     runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(
-            main, ["--config", str(sample_config_file), "--dry-run", "--verbose"]
+            cli, ["run", "--config", str(sample_config_file), "--dry-run", "--verbose"]
         )
 
         assert result.exit_code == 0
@@ -149,7 +148,9 @@ def test_cli_test_claude(
     mock_llm_summarizer.return_value = mock_summarizer
 
     runner = CliRunner()
-    result = runner.invoke(main, ["--config", str(sample_config_file), "--test-claude"])
+    result = runner.invoke(
+        cli, ["run", "--config", str(sample_config_file), "--test-claude"]
+    )
 
     assert result.exit_code == 0
     assert "Claude CLI is working correctly" in result.output
@@ -213,8 +214,8 @@ def test_full_workflow_integration(
     runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(
-            main,
-            ["--config", str(sample_config_file), "--verbose"],
+            cli,
+            ["run", "--config", str(sample_config_file), "--verbose"],
         )
 
         assert result.exit_code == 0
@@ -264,8 +265,14 @@ def test_cli_with_output_override(sample_config_file: Path) -> None:
 
         with runner.isolated_filesystem():
             runner.invoke(
-                main,
-                ["--config", str(sample_config_file), "--output", "custom_output.html"],
+                cli,
+                [
+                    "run",
+                    "--config",
+                    str(sample_config_file),
+                    "--output",
+                    "custom_output.html",
+                ],
             )
 
             # Should not fail due to output override
@@ -283,8 +290,9 @@ def test_cli_max_threads_override(sample_config_file: Path) -> None:
 
         with runner.isolated_filesystem():
             runner.invoke(
-                main,
+                cli,
                 [
+                    "run",
                     "--config",
                     str(sample_config_file),
                     "--max-threads",
