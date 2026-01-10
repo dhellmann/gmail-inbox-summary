@@ -116,6 +116,48 @@ def delete(email: str) -> None:
         raise click.Abort()
 
 
+@cli.command("test-claude")
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True, path_type=Path),
+    default="config.yaml",
+    help="Path to configuration file (default: config.yaml)",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Enable verbose logging",
+)
+def test_claude(config: Path, verbose: bool) -> None:
+    """Test Claude CLI connection."""
+    setup_logging(verbose)
+
+    try:
+        # Load configuration
+        app_config = Config(str(config))
+        console.print(f"[green]✓[/green] Loaded configuration from {config}")
+
+        # Test Claude CLI connection
+        summarizer = LLMSummarizer(app_config)
+        console.print("\n[yellow]Testing Claude CLI connection...[/yellow]")
+        if summarizer.test_cli_connection():
+            console.print("[green]✓ Claude CLI is working correctly[/green]")
+        else:
+            console.print("[red]✗ Claude CLI test failed[/red]")
+            raise click.Abort()
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user[/yellow]")
+        raise click.Abort() from None
+    except Exception as e:
+        console.print(f"\n[red]Error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise click.Abort() from e
+
+
 @cli.command()
 @click.option(
     "--config",
@@ -147,18 +189,12 @@ def delete(email: str) -> None:
     is_flag=True,
     help="Enable verbose logging",
 )
-@click.option(
-    "--test-claude",
-    is_flag=True,
-    help="Test Claude CLI connection and exit",
-)
 def run(
     config: Path,
     output: Path | None,
     max_threads: int | None,
     dry_run: bool,
     verbose: bool,
-    test_claude: bool,
 ) -> None:
     """Generate AI-powered summaries of Gmail inbox threads.
 
@@ -175,17 +211,6 @@ def run(
         # Override config settings if provided via CLI
         if max_threads:
             app_config.config["max_threads_per_category"] = max_threads
-
-        # Test Claude CLI connection if requested
-        if test_claude:
-            summarizer = LLMSummarizer(app_config)
-            console.print("\n[yellow]Testing Claude CLI connection...[/yellow]")
-            if summarizer.test_cli_connection():
-                console.print("[green]✓ Claude CLI is working correctly[/green]")
-                return
-            else:
-                console.print("[red]✗ Claude CLI test failed[/red]")
-                raise click.Abort()
 
         # Initialize components
         gmail_client = None

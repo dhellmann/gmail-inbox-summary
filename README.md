@@ -54,7 +54,7 @@ Before using the application, you need:
 
 1. Install Claude Code CLI: [Installation Instructions](https://claude.ai/code)
 2. Authenticate: `claude auth`
-3. Test connection: `gmail-summary run --test-claude`
+3. Test connection: `gmail-summary test-claude`
 
 ### 3. Configuration
 
@@ -114,7 +114,7 @@ max_threads_per_category: 20
 gmail-summary creds store --email your.email@gmail.com
 
 # Test Claude CLI connection
-gmail-summary run --test-claude
+gmail-summary test-claude
 
 # Generate summary (dry run to test configuration)
 gmail-summary run --dry-run --verbose
@@ -238,8 +238,9 @@ Usage: gmail-summary [OPTIONS] COMMAND [ARGS]...
 Generate AI-powered summaries of Gmail inbox threads.
 
 Commands:
-  creds  Manage Gmail credentials in keychain.
-  run    Generate AI-powered summaries of Gmail inbox threads.
+  creds        Manage Gmail credentials in keychain.
+  run          Generate AI-powered summaries of Gmail inbox threads.
+  test-claude  Test Claude CLI connection.
 
 Main Command:
   gmail-summary run [OPTIONS]
@@ -249,9 +250,16 @@ Main Command:
     -o, --output PATH       Output HTML file path (overrides config)
     -n, --max-threads INT  Maximum threads per category (overrides config)
     --dry-run              Process threads without generating summaries
-    --test-claude          Test Claude CLI connection and exit
     -v, --verbose          Enable verbose logging
     --help                 Show this message and exit
+
+Test Command:
+  gmail-summary test-claude [OPTIONS]
+  
+  Options:
+    -c, --config PATH      Configuration file path (default: config.yaml)
+    -v, --verbose         Enable verbose logging
+    --help                Show this message and exit
 
 Credential Management:
   gmail-summary creds store [OPTIONS]
@@ -292,7 +300,7 @@ gmail-summary run --config new_config.yaml --dry-run --verbose
 gmail-summary creds store --email your.email@gmail.com
 
 # 2. Test Claude CLI connection
-gmail-summary run --test-claude
+gmail-summary test-claude
 
 # 3. Test configuration with dry run
 gmail-summary run --dry-run --verbose

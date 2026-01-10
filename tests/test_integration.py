@@ -148,9 +148,7 @@ def test_cli_test_claude(
     mock_llm_summarizer.return_value = mock_summarizer
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli, ["run", "--config", str(sample_config_file), "--test-claude"]
-    )
+    result = runner.invoke(cli, ["test-claude", "--config", str(sample_config_file)])
 
     assert result.exit_code == 0
     assert "Claude CLI is working correctly" in result.output
