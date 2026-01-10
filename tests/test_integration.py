@@ -46,7 +46,7 @@ output_file: "test_summary.html"
 max_threads_per_category: 5
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(config_content)
         return Path(f.name)
 
@@ -69,7 +69,7 @@ def sample_threads_data() -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
                     "body": "Here's the latest project status...",
                     "label_ids": ["INBOX"],
                 }
-            ]
+            ],
         ),
         # Personal thread
         (
@@ -85,7 +85,7 @@ def sample_threads_data() -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
                     "body": "What are you up to this weekend?",
                     "label_ids": ["INBOX"],
                 }
-            ]
+            ],
         ),
     ]
 
@@ -127,8 +127,7 @@ def test_cli_dry_run(
     runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(
-            main,
-            ["--config", str(sample_config_file), "--dry-run", "--verbose"]
+            main, ["--config", str(sample_config_file), "--dry-run", "--verbose"]
         )
 
         assert result.exit_code == 0
@@ -152,10 +151,7 @@ def test_cli_test_claude(
     mock_llm_summarizer.return_value = mock_summarizer
 
     runner = CliRunner()
-    result = runner.invoke(
-        main,
-        ["--config", str(sample_config_file), "--test-claude"]
-    )
+    result = runner.invoke(main, ["--config", str(sample_config_file), "--test-claude"])
 
     assert result.exit_code == 0
     assert "Claude CLI is working correctly" in result.output
@@ -191,11 +187,13 @@ def test_full_workflow_integration(
             result[category] = []
             for thread in threads:
                 thread_copy = thread.copy()
-                thread_copy.update({
-                    "summary": f"AI summary for {thread['subject']}",
-                    "summary_generated": True,
-                    "summary_error": None,
-                })
+                thread_copy.update(
+                    {
+                        "summary": f"AI summary for {thread['subject']}",
+                        "summary_generated": True,
+                        "summary_error": None,
+                    }
+                )
                 result[category].append(thread_copy)
         return result
 
@@ -254,14 +252,17 @@ def test_cli_with_output_override(sample_config_file: Path) -> None:
     """Test CLI with output file override."""
     runner = CliRunner()
 
-    with patch("gmail_summarizer.main.GmailClient") as mock_gmail_client, \
-         patch("gmail_summarizer.main.LLMSummarizer") as mock_llm_summarizer, \
-         patch("gmail_summarizer.main.HTMLGenerator") as mock_html_generator:
-
+    with (
+        patch("gmail_summarizer.main.GmailClient") as mock_gmail_client,
+        patch("gmail_summarizer.main.LLMSummarizer") as mock_llm_summarizer,
+        patch("gmail_summarizer.main.HTMLGenerator") as mock_html_generator,
+    ):
         # Basic mocks to prevent actual execution
         mock_gmail_client.return_value.get_inbox_threads.return_value = []
         mock_llm_summarizer.return_value.test_cli_connection.return_value = True
-        mock_html_generator.return_value.generate_html_report.return_value = "/tmp/custom.html"
+        mock_html_generator.return_value.generate_html_report.return_value = (
+            "/tmp/custom.html"
+        )
 
         with runner.isolated_filesystem():
             runner.invoke(
@@ -285,7 +286,13 @@ def test_cli_max_threads_override(sample_config_file: Path) -> None:
         with runner.isolated_filesystem():
             runner.invoke(
                 main,
-                ["--config", str(sample_config_file), "--max-threads", "15", "--dry-run"],
+                [
+                    "--config",
+                    str(sample_config_file),
+                    "--max-threads",
+                    "15",
+                    "--dry-run",
+                ],
             )
 
             # Config should be updated with override

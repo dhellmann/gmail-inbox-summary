@@ -19,7 +19,7 @@ class Config:
             config_path: Directory containing configuration files or direct config file path
         """
         config_path_obj = Path(config_path)
-        
+
         # If it's a file, load it directly as a unified config
         if config_path_obj.is_file():
             self.config_file = config_path_obj
@@ -30,7 +30,7 @@ class Config:
             self.config_dir = config_path_obj
             self.config_file = None
             self.unified_config = False
-            
+
         self.settings: dict[str, Any] = {}
         self.categories: list[dict[str, Any]] = []
         self.config: dict[str, Any] = {}  # For unified config
@@ -42,11 +42,11 @@ class Config:
             # Load from unified config file
             with open(self.config_file) as f:
                 self.config = yaml.safe_load(f) or {}
-            
+
             # Extract settings and categories from unified config
             self.settings = self.config
             self.categories = self.config.get("categories", [])
-            
+
         else:
             # Load from separate files (legacy format)
             # Load main settings

@@ -121,7 +121,6 @@ def main(
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-
             # Gmail client
             task = progress.add_task("Initializing Gmail client...", total=1)
             gmail_client = GmailClient(app_config)
@@ -162,7 +161,9 @@ def main(
             for thread in gmail_client.get_inbox_threads():
                 messages = gmail_client.get_thread_messages(thread["id"])
                 threads_data.append((thread, messages))
-                progress.update(task, description=f"Fetched {len(threads_data)} threads...")
+                progress.update(
+                    task, description=f"Fetched {len(threads_data)} threads..."
+                )
 
                 # Stop if we have enough for testing
                 if len(threads_data) >= 100:  # Reasonable limit for testing
@@ -178,7 +179,9 @@ def main(
         _display_categorization_summary(categorized_threads)
 
         if dry_run:
-            console.print("\n[yellow]Dry run complete - skipping summarization[/yellow]")
+            console.print(
+                "\n[yellow]Dry run complete - skipping summarization[/yellow]"
+            )
             return
 
         # Generate summaries
@@ -188,7 +191,9 @@ def main(
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            total_threads = sum(len(threads) for threads in categorized_threads.values())
+            total_threads = sum(
+                len(threads) for threads in categorized_threads.values()
+            )
             task = progress.add_task("Generating summaries...", total=total_threads)
 
             summarized_threads = summarizer.summarize_threads_batch(categorized_threads)
@@ -241,19 +246,25 @@ def _display_categorization_summary(categorized_threads: dict[str, list]) -> Non
     for category_name, threads in categorized_threads.items():
         if threads:  # Only show categories with threads
             thread_count = len(threads)
-            important_count = sum(1 for t in threads if t.get("has_important_sender", False))
+            important_count = sum(
+                1 for t in threads if t.get("has_important_sender", False)
+            )
 
             table.add_row(
                 category_name,
                 str(thread_count),
-                str(important_count) if important_count > 0 else "-"
+                str(important_count) if important_count > 0 else "-",
             )
 
             total_threads += thread_count
             total_important += important_count
 
     table.add_section()
-    table.add_row("[bold]Total[/bold]", f"[bold]{total_threads}[/bold]", f"[bold]{total_important}[/bold]")
+    table.add_row(
+        "[bold]Total[/bold]",
+        f"[bold]{total_threads}[/bold]",
+        f"[bold]{total_important}[/bold]",
+    )
 
     console.print(table)
 

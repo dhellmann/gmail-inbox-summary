@@ -24,18 +24,18 @@ def test_custom_filters() -> None:
     generator = HTMLGenerator(config)
 
     # Test truncate_text filter
-    truncate_filter = generator.jinja_env.filters['truncate_text']
+    truncate_filter = generator.jinja_env.filters["truncate_text"]
     assert truncate_filter("Short text") == "Short text"
     assert truncate_filter("A" * 150, 100) == "A" * 97 + "..."
 
     # Test format_email filter
-    format_email_filter = generator.jinja_env.filters['format_email']
+    format_email_filter = generator.jinja_env.filters["format_email"]
     assert format_email_filter("user@example.com") == "user@example.com"
     assert format_email_filter("John Doe <user@example.com>") == "user@example.com"
     assert format_email_filter("Invalid email") == "Invalid email"
 
     # Test domain_from_email filter
-    domain_filter = generator.jinja_env.filters['domain_from_email']
+    domain_filter = generator.jinja_env.filters["domain_from_email"]
     assert domain_filter("user@example.com") == "example.com"
     assert domain_filter("John Doe <user@example.com>") == "example.com"
 
@@ -45,7 +45,7 @@ def test_template_context_preparation() -> None:
     config = Mock(spec=Config)
     config.get_categories.return_value = [
         {"name": "Work", "order": 1},
-        {"name": "Personal", "order": 2}
+        {"name": "Personal", "order": 2},
     ]
     config.get_max_threads_per_category.return_value = 10
     config.get_important_senders.return_value = ["boss@company.com"]
@@ -57,28 +57,28 @@ def test_template_context_preparation() -> None:
             {
                 "subject": "Project Update",
                 "has_important_sender": True,
-                "participants": ["user@company.com", "boss@company.com"]
+                "participants": ["user@company.com", "boss@company.com"],
             },
             {
                 "subject": "Meeting Notes",
                 "has_important_sender": False,
-                "participants": ["user@company.com", "colleague@company.com"]
-            }
+                "participants": ["user@company.com", "colleague@company.com"],
+            },
         ],
         "Personal": [
             {
                 "subject": "Weekend Plans",
                 "has_important_sender": False,
-                "participants": ["user@gmail.com", "friend@gmail.com"]
+                "participants": ["user@gmail.com", "friend@gmail.com"],
             }
-        ]
+        ],
     }
 
     stats = {
         "successful_summaries": 3,
         "failed_summaries": 0,
         "success_rate": 1.0,
-        "error_types": {}
+        "error_types": {},
     }
 
     context = generator._prepare_template_context(summarized_threads, stats)
@@ -137,15 +137,13 @@ def test_generate_html_report() -> None:
         generator = HTMLGenerator(config, str(templates_dir))
 
         summarized_threads = {
-            "Test": [
-                {"subject": "Test Thread", "has_important_sender": False}
-            ]
+            "Test": [{"subject": "Test Thread", "has_important_sender": False}]
         }
         stats = {
             "successful_summaries": 1,
             "failed_summaries": 0,
             "success_rate": 1.0,
-            "error_types": {}
+            "error_types": {},
         }
 
         with tempfile.TemporaryDirectory() as output_dir:
@@ -175,24 +173,28 @@ def test_category_summary_generation() -> None:
                 "message_count": 3,
                 "has_important_sender": True,
                 "summary_generated": True,
-                "participants": ["user@company.com", "boss@company.com", "hr@company.com"]
+                "participants": [
+                    "user@company.com",
+                    "boss@company.com",
+                    "hr@company.com",
+                ],
             },
             {
                 "message_count": 1,
                 "has_important_sender": False,
                 "summary_generated": True,
-                "participants": ["user@company.com", "colleague@company.com"]
-            }
+                "participants": ["user@company.com", "colleague@company.com"],
+            },
         ],
         "Personal": [
             {
                 "message_count": 2,
                 "has_important_sender": False,
                 "summary_generated": False,
-                "participants": ["user@gmail.com", "friend@gmail.com"]
+                "participants": ["user@gmail.com", "friend@gmail.com"],
             }
         ],
-        "Empty": []
+        "Empty": [],
     }
 
     summary = generator.generate_category_summary(categorized_threads)

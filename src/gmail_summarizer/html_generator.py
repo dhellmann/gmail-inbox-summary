@@ -30,9 +30,9 @@ class HTMLGenerator:
         # Set up Jinja2 environment
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(self.template_dir)),
-            autoescape=select_autoescape(['html', 'xml']),
+            autoescape=select_autoescape(["html", "xml"]),
             trim_blocks=True,
-            lstrip_blocks=True
+            lstrip_blocks=True,
         )
 
         # Add custom filters
@@ -45,34 +45,34 @@ class HTMLGenerator:
             """Truncate text to specified length."""
             if len(text) <= max_length:
                 return text
-            return text[:max_length - 3] + "..."
+            return text[: max_length - 3] + "..."
 
         def format_email(email: str) -> str:
             """Format email address for display."""
-            if '<' in email and '>' in email:
+            if "<" in email and ">" in email:
                 # Extract just the email from "Name <email@domain.com>" format
-                start = email.rfind('<')
-                end = email.rfind('>')
+                start = email.rfind("<")
+                end = email.rfind(">")
                 if start != -1 and end != -1:
-                    return email[start + 1:end]
+                    return email[start + 1 : end]
             return email
 
         def domain_from_email(email: str) -> str:
             """Extract domain from email address."""
             clean_email = format_email(email)
-            if '@' in clean_email:
-                return clean_email.split('@')[1]
+            if "@" in clean_email:
+                return clean_email.split("@")[1]
             return clean_email
 
-        self.jinja_env.filters['truncate_text'] = truncate_text
-        self.jinja_env.filters['format_email'] = format_email
-        self.jinja_env.filters['domain_from_email'] = domain_from_email
+        self.jinja_env.filters["truncate_text"] = truncate_text
+        self.jinja_env.filters["format_email"] = format_email
+        self.jinja_env.filters["domain_from_email"] = domain_from_email
 
     def generate_html_report(
         self,
         summarized_threads: dict[str, list[dict[str, Any]]],
         stats: dict[str, Any],
-        output_path: str | None = None
+        output_path: str | None = None,
     ) -> str:
         """Generate HTML report from summarized threads.
 
@@ -92,14 +92,14 @@ class HTMLGenerator:
 
         try:
             # Load and render template
-            template = self.jinja_env.get_template('summary.html')
+            template = self.jinja_env.get_template("summary.html")
             html_content = template.render(**context)
 
             # Write to file
             output_file = Path(output_path)
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write(html_content)
 
             logger.info(f"Generated HTML report: {output_file.absolute()}")
@@ -110,9 +110,7 @@ class HTMLGenerator:
             raise
 
     def _prepare_template_context(
-        self,
-        summarized_threads: dict[str, list[dict[str, Any]]],
-        stats: dict[str, Any]
+        self, summarized_threads: dict[str, list[dict[str, Any]]], stats: dict[str, Any]
     ) -> dict[str, Any]:
         """Prepare context data for Jinja2 template.
 
@@ -124,20 +122,26 @@ class HTMLGenerator:
             Template context dictionary
         """
         # Sort categories by the order specified in configuration
-        categories_config = {cat["name"]: cat.get("order", 999) for cat in self.config.get_categories()}
+        categories_config = {
+            cat["name"]: cat.get("order", 999) for cat in self.config.get_categories()
+        }
 
         # Sort threads data by category order
         sorted_threads = {}
-        for category_name in sorted(summarized_threads.keys(), key=lambda x: categories_config.get(x, 999)):
+        for category_name in sorted(
+            summarized_threads.keys(), key=lambda x: categories_config.get(x, 999)
+        ):
             threads = summarized_threads[category_name]
             if threads:  # Only include categories with threads
                 # Sort threads within category by importance and then by subject
                 sorted_threads_in_category = sorted(
                     threads,
                     key=lambda t: (
-                        not t.get("has_important_sender", False),  # Important first (False < True)
-                        t.get("subject", "").lower()
-                    )
+                        not t.get(
+                            "has_important_sender", False
+                        ),  # Important first (False < True)
+                        t.get("subject", "").lower(),
+                    ),
                 )
                 sorted_threads[category_name] = sorted_threads_in_category
 
@@ -151,29 +155,27 @@ class HTMLGenerator:
         context = {
             # Main data
             "categorized_threads": sorted_threads,
-
             # Statistics
             "total_threads": total_threads,
             "successful_summaries": stats.get("successful_summaries", 0),
             "failed_summaries": stats.get("failed_summaries", 0),
             "success_rate": stats.get("success_rate", 0),
             "important_threads": important_threads,
-
             # Metadata
             "generated_date": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
             "generated_timestamp": datetime.now().isoformat(),
-
             # Configuration
             "max_threads_per_category": self.config.get_max_threads_per_category(),
             "important_senders": self.config.get_important_senders(),
-
             # Error details (if any)
             "error_types": stats.get("error_types", {}),
         }
 
         return context
 
-    def generate_category_summary(self, categorized_threads: dict[str, list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
+    def generate_category_summary(
+        self, categorized_threads: dict[str, list[dict[str, Any]]]
+    ) -> dict[str, dict[str, Any]]:
         """Generate summary statistics for each category.
 
         Args:
@@ -189,20 +191,26 @@ class HTMLGenerator:
                 continue
 
             total_messages = sum(t.get("message_count", 0) for t in threads)
-            important_count = sum(1 for t in threads if t.get("has_important_sender", False))
-            successful_summaries = sum(1 for t in threads if t.get("summary_generated", False))
+            important_count = sum(
+                1 for t in threads if t.get("has_important_sender", False)
+            )
+            successful_summaries = sum(
+                1 for t in threads if t.get("summary_generated", False)
+            )
 
             # Extract unique domains from participants
             domains = set()
             for thread in threads:
                 for participant in thread.get("participants", []):
-                    if '@' in participant:
-                        domains.add(participant.split('@')[1])
+                    if "@" in participant:
+                        domains.add(participant.split("@")[1])
 
             category_summaries[category_name] = {
                 "thread_count": len(threads),
                 "total_messages": total_messages,
-                "avg_messages_per_thread": total_messages / len(threads) if threads else 0,
+                "avg_messages_per_thread": total_messages / len(threads)
+                if threads
+                else 0,
                 "important_threads": important_count,
                 "successful_summaries": successful_summaries,
                 "unique_domains": len(domains),
@@ -245,13 +253,13 @@ body {
         output_path = Path(output_dir) / "static" / "style.css"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(css_content)
 
         logger.info(f"Created CSS file: {output_path.absolute()}")
         return str(output_path.absolute())
 
-    def validate_template(self, template_name: str = 'summary.html') -> bool:
+    def validate_template(self, template_name: str = "summary.html") -> bool:
         """Validate that the template exists and is syntactically correct.
 
         Args:
@@ -282,7 +290,7 @@ body {
             logger.error(f"Template validation failed: {e}")
             return False
 
-    def get_template_path(self, template_name: str = 'summary.html') -> Path:
+    def get_template_path(self, template_name: str = "summary.html") -> Path:
         """Get the full path to a template file.
 
         Args:
