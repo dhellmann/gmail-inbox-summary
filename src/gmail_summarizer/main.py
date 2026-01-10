@@ -499,5 +499,162 @@ def _display_summarization_stats(stats: dict) -> None:
     console.print(table)
 
 
+@cli.group()
+def config() -> None:
+    """Manage configuration files."""
+    pass
+
+
+@config.command()
+@click.option(
+    "--email", "-e",
+    help="Gmail email address to use in the configuration"
+)
+@click.option(
+    "--output", "-o",
+    type=click.Path(exists=False),
+    default="config.yaml",
+    help="Output file path for the configuration file"
+)
+@click.option(
+    "--force", "-f",
+    is_flag=True,
+    help="Overwrite existing configuration file"
+)
+def generate(email: str | None, output: str, force: bool) -> None:
+    """Generate a minimal configuration file with example content.
+
+    Creates a sample configuration file with sensible defaults and example
+    categories. You can customize the Gmail email address and output location.
+    """
+    output_path = Path(output)
+
+    # Check if file exists and not forced
+    if output_path.exists() and not force:
+        console.print(f"[red]Configuration file already exists at {output_path}[/red]")
+        console.print("[yellow]Use --force to overwrite or specify a different --output path[/yellow]")
+        raise click.Abort()
+
+    # Get email address if not provided
+    if not email:
+        email = Prompt.ask(
+            "[cyan]Gmail email address[/cyan]",
+            default="your.email@gmail.com"
+        )
+
+    # Generate configuration content
+    config_content = _generate_config_template(email)
+
+    try:
+        # Create parent directory if needed
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write configuration file
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(config_content)
+
+        console.print(f"[green]✓ Configuration file created: {output_path.absolute()}[/green]")
+        console.print("\n[yellow]Next steps:[/yellow]")
+        console.print(f"1. Store your Gmail credentials: [cyan]gmail-summary creds store --email {email}[/cyan]")
+        console.print("2. Test Claude CLI connection: [cyan]gmail-summary test-claude[/cyan]")
+        console.print("3. Review and customize the configuration file")
+        console.print("4. Run a test summary: [cyan]gmail-summary run --dry-run[/cyan]")
+
+    except Exception as e:
+        console.print(f"[red]Error creating configuration file: {e}[/red]")
+        raise click.Abort() from e
+
+
+def _generate_config_template(email: str) -> str:
+    """Generate configuration file template with example content.
+
+    Args:
+        email: Gmail email address to use in the configuration
+
+    Returns:
+        Configuration file content as YAML string
+    """
+    template = f'''# Gmail Inbox Summary Configuration
+# Generated configuration file with example content
+
+# Gmail IMAP Configuration
+gmail:
+  email_address: "{email}"
+  # password is stored securely in keychain - run: gmail-summary creds store
+  imap_server: "imap.gmail.com"
+  imap_port: 993
+
+# Claude Code CLI Configuration
+claude:
+  cli_path: "claude"
+  timeout: 30
+
+# Thread Categories - processed in order, first match wins
+categories:
+  # Work-related emails
+  - name: "Work Email"
+    summary_prompt: "Summarize this work-related email focusing on action items, decisions, and deadlines."
+    criteria:
+      from_patterns:
+        - ".*@company\\\\.com"
+        - ".*@client\\\\.org"
+      subject_patterns:
+        - "\\\\[PROJECT\\\\]"
+        - "Meeting:"
+        - "Action Required:"
+
+  # GitHub/Development notifications
+  - name: "GitHub Notifications"
+    summary_prompt: "Summarize this GitHub notification, focusing on PR status, issues, and code changes."
+    criteria:
+      from_patterns:
+        - "notifications@github\\\\.com"
+        - "noreply@github\\\\.com"
+      subject_patterns:
+        - "\\\\[.*\\\\].*Pull Request"
+        - "\\\\[.*\\\\].*Issue"
+        - "\\\\[.*\\\\].*merged"
+
+  # Newsletter and promotional emails
+  - name: "Newsletters"
+    summary_prompt: "Provide a brief summary of this newsletter or promotional email, highlighting key offers or information."
+    criteria:
+      labels:
+        - "CATEGORY_PROMOTIONS"
+        - "CATEGORY_UPDATES"
+      subject_patterns:
+        - "Newsletter"
+        - "Weekly Update"
+        - "Monthly Digest"
+
+  # Important/urgent emails
+  - name: "Important Messages"
+    summary_prompt: "Summarize this important email, highlighting urgency and required actions."
+    criteria:
+      labels:
+        - "IMPORTANT"
+      subject_patterns:
+        - "URGENT"
+        - "\\\\[HIGH PRIORITY\\\\]"
+
+  # Everything else (catch-all category)
+  - name: "General Email"
+    summary_prompt: "Provide a brief, friendly summary of this email."
+    criteria: {{}}  # Empty criteria = catch all remaining emails
+
+# Highlight emails from important senders
+important_senders:
+  - "boss@company\\\\.com"
+  - "ceo@company\\\\.com"
+  - "alerts@monitoring\\\\.com"
+  - "noreply@important-service\\\\.com"
+
+# Output Configuration
+output_file: "inbox_summary.html"
+max_threads_per_category: 20
+'''
+    return template
+
+
 if __name__ == "__main__":
     cli()

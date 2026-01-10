@@ -423,3 +423,98 @@ def test_creds_check_connection_failure(
     assert "Credentials found for test@gmail.com in keychain" in result.output
     assert "Testing IMAP connection to" in result.output
     assert "IMAP connection failed: Authentication failed" in result.output
+
+
+def test_config_generate_command() -> None:
+    """Test config generate command creates valid configuration file."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Test with email provided
+        result = runner.invoke(
+            cli, ["config", "generate", "--email", "user@example.com", "--output", "test.yaml"]
+        )
+
+        assert result.exit_code == 0
+        assert "Configuration file created:" in result.output
+        assert "Next steps:" in result.output
+
+        # Check file was created
+        config_file = Path("test.yaml")
+        assert config_file.exists()
+
+        # Verify content
+        content = config_file.read_text(encoding="utf-8")
+        assert "email_address: \"user@example.com\"" in content
+        assert "categories:" in content
+        assert "Work Email" in content
+        assert "GitHub Notifications" in content
+
+        # Test that generated config is valid
+        from gmail_summarizer.config import Config
+        config = Config(str(config_file))
+        assert config.app_config is not None
+        assert config.get_gmail_config()["email_address"] == "user@example.com"
+
+
+def test_config_generate_with_prompt(monkeypatch) -> None:
+    """Test config generate command with email prompt."""
+    # Mock the Prompt.ask to return a test email
+    monkeypatch.setattr("gmail_summarizer.main.Prompt.ask", lambda *args, **kwargs: "prompted@example.com")
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli, ["config", "generate", "--output", "prompted.yaml"]
+        )
+
+        assert result.exit_code == 0
+
+        # Check file content contains prompted email
+        config_file = Path("prompted.yaml")
+        content = config_file.read_text(encoding="utf-8")
+        assert "email_address: \"prompted@example.com\"" in content
+
+
+def test_config_generate_file_exists() -> None:
+    """Test config generate command when file already exists."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Create existing file
+        existing_file = Path("existing.yaml")
+        existing_file.write_text("existing content")
+
+        # Try to generate without force
+        result = runner.invoke(
+            cli, ["config", "generate", "--email", "test@example.com", "--output", "existing.yaml"]
+        )
+
+        assert result.exit_code != 0
+        assert "Configuration file already exists" in result.output
+        assert "Use --force to overwrite" in result.output
+
+        # Verify original content is preserved
+        assert existing_file.read_text() == "existing content"
+
+        # Test with force flag
+        result = runner.invoke(
+            cli, ["config", "generate", "--email", "test@example.com", "--output", "existing.yaml", "--force"]
+        )
+
+        assert result.exit_code == 0
+        content = existing_file.read_text(encoding="utf-8")
+        assert "email_address: \"test@example.com\"" in content
+
+
+def test_config_generate_help() -> None:
+    """Test config generate help message."""
+    runner = CliRunner()
+    result = runner.invoke(cli, ["config", "generate", "--help"])
+
+    assert result.exit_code == 0
+    assert "Generate a minimal configuration file" in result.output
+    assert "--email" in result.output
+    assert "--output" in result.output
+    assert "--force" in result.output

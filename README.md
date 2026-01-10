@@ -111,7 +111,10 @@ max_threads_per_category: 20
 ### 4. Basic Usage
 
 ```bash
-# Store credentials securely (first time setup)
+# Generate a configuration file (first time setup)
+gmail-summary config generate --email your.email@gmail.com
+
+# Store credentials securely 
 gmail-summary creds store --email your.email@gmail.com
 
 # Test Claude CLI connection
@@ -246,6 +249,7 @@ Usage: gmail-summary [OPTIONS] COMMAND [ARGS]...
 Generate AI-powered summaries of Gmail inbox threads.
 
 Commands:
+  config       Manage configuration files.
   creds        Manage Gmail credentials in keychain.
   run          Generate AI-powered summaries of Gmail inbox threads.
   test-claude  Test Claude CLI connection.
@@ -278,6 +282,12 @@ Credential Management:
     -c, --config PATH      Configuration file (optional, uses Gmail defaults)
     -v, --verbose         Enable verbose logging
   gmail-summary creds delete <EMAIL>    # Delete stored credentials
+
+Configuration Management:
+  gmail-summary config generate [OPTIONS]  # Generate example configuration file
+    -e, --email TEXT       Gmail email address to use in config
+    -o, --output PATH      Configuration file output path (default: config.yaml)
+    -f, --force            Overwrite existing configuration file
 ```
 
 ## Example Workflows
@@ -306,16 +316,19 @@ gmail-summary run --config new_config.yaml --dry-run --verbose
 ### First-Time Setup Workflow
 
 ```bash
-# 1. Store credentials securely
+# 1. Generate configuration file
+gmail-summary config generate --email your.email@gmail.com
+
+# 2. Store credentials securely
 gmail-summary creds store --email your.email@gmail.com
 
-# 2. Test Claude CLI connection
+# 3. Test Claude CLI connection
 gmail-summary test-claude
 
-# 3. Test configuration with dry run
+# 4. Test configuration with dry run
 gmail-summary run --dry-run --verbose
 
-# 4. Generate actual summary
+# 5. Generate actual summary
 gmail-summary run
 ```
 
