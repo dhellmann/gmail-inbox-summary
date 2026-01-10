@@ -13,6 +13,7 @@ A Python application that generates AI-powered summaries of Gmail inbox threads 
 - **💻 Modern CLI**: Rich command-line interface with progress indicators and colored output
 - **🔧 Flexible Configuration**: Support for both unified YAML config files and modular configurations
 - **🔒 Secure Credentials**: Cross-platform keychain storage for Gmail passwords with system integration
+- **✅ Configuration Validation**: Automatic validation of config files with clear error messages
 - **🧪 Comprehensive Testing**: Full test coverage with unit and integration tests
 
 ## Quick Start
@@ -165,6 +166,8 @@ gmail:
 **Security Note**: Store passwords in the system keychain using `gmail-summary creds store` instead of putting them in configuration files.
 
 **Convenience Feature**: The `creds check` command can work without a configuration file for Gmail accounts, using default IMAP settings (imap.gmail.com:993). For custom IMAP servers, provide a configuration file with the `--config` option.
+
+**Configuration Validation**: All configuration files are automatically validated using Pydantic models. Invalid configurations will show clear error messages with specific validation failures, including invalid regex patterns, out-of-range values, and unknown fields.
 
 ### Claude Configuration
 
@@ -415,6 +418,23 @@ Error: Invalid YAML syntax
 - Validate YAML syntax with online tools
 - Check regex pattern escaping: use `\\.` for literal dots
 - Ensure proper indentation (spaces, not tabs)
+
+**Configuration Validation Errors:**
+
+```
+Error: Invalid configuration: 1 validation error
+  gmail.email_address
+    Invalid email address format
+```
+
+Common validation issues:
+- Invalid email format (missing @ symbol)
+- Invalid regex patterns in criteria (use proper escaping)
+- Port numbers outside valid range (1-65535)
+- Timeout values outside valid range (1-600 seconds)
+- Empty category names or prompts
+- Duplicate category names
+- Unknown configuration fields
 
 **No Threads Found:**
 
