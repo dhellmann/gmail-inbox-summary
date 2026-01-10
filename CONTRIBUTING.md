@@ -155,7 +155,7 @@ gmail-inbox-summary/
 
 We use modern Python practices with the following tools:
 
-- **Python 3.10+**: Use modern union syntax (`str | None` instead of `Optional[str]`)
+- **Python 3.12+**: Use modern union syntax (`str | None` instead of `Optional[str]`)
 - **Ruff**: For linting and formatting (replaces Black, isort, and many flake8 plugins)
 - **MyPy**: For static type checking
 - **Type hints**: Required for all functions and methods

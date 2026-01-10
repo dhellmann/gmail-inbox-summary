@@ -22,7 +22,7 @@ class Config:
 
         # If it's a file, load it directly as a unified config
         if config_path_obj.is_file():
-            self.config_file = config_path_obj
+            self.config_file: Path | None = config_path_obj
             self.config_dir = config_path_obj.parent
             self.unified_config = True
         else:

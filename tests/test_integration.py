@@ -182,7 +182,7 @@ def test_full_workflow_integration(
     mock_summarizer.test_cli_connection.return_value = True
 
     def mock_summarize_batch(categorized_threads: dict) -> dict:
-        result = {}
+        result: dict[str, list] = {}
         for category, threads in categorized_threads.items():
             result[category] = []
             for thread in threads:

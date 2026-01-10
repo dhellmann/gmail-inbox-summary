@@ -43,7 +43,7 @@ gmail-summary --help
 
 ### 1. Python Requirements
 
-- Python 3.10 or higher
+- Python 3.12 or higher
 - pip package manager
 
 ### 2. Gmail API Setup
@@ -127,7 +127,7 @@ gmail-summary
 
 **Python Version:**
 ```bash
-python --version  # Should be 3.10+
+python --version  # Should be 3.12+
 ```
 
 **Hatch Installation:**

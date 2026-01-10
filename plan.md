@@ -137,7 +137,7 @@ name = "gmail-inbox-summary"
 dynamic = ["version"]
 description = "Generate AI-powered summaries of Gmail inbox threads"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 license = "MIT"
 authors = [
     { name = "Your Name", email = "your.email@example.com" },
@@ -145,10 +145,9 @@ authors = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "google-api-python-client>=2.0.0",
@@ -246,7 +245,7 @@ select = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
