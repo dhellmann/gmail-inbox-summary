@@ -5,7 +5,6 @@ import pickle
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
-from typing import Optional
 
 from google.auth.transport.requests import Request  # type: ignore[import-untyped]
 from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore[import-untyped]
@@ -73,7 +72,7 @@ class GmailClient:
         logger.info("Successfully authenticated with Gmail API")
 
     def get_inbox_threads(
-        self, max_results: Optional[int] = None
+        self, max_results: int | None = None
     ) -> Iterator[dict[str, Any]]:
         """Fetch all threads from inbox.
 
@@ -125,7 +124,7 @@ class GmailClient:
             logger.error(f"An error occurred fetching inbox threads: {error}")
             raise
 
-    def get_thread_details(self, thread_id: str) -> Optional[dict[str, Any]]:
+    def get_thread_details(self, thread_id: str) -> dict[str, Any] | None:
         """Get detailed information for a specific thread.
 
         Args:
