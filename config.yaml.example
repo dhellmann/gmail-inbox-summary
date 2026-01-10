@@ -1,0 +1,147 @@
+# Gmail Inbox Summary Configuration
+# Copy this file to config.yaml and customize for your needs
+
+# Gmail API Configuration
+gmail:
+  credentials_file: "credentials.json"  # Download from Google Cloud Console
+  token_file: "token.json"             # Auto-generated after first authentication
+
+# Claude Code CLI Configuration  
+claude:
+  cli_path: "claude"     # Path to Claude Code CLI executable
+  timeout: 30           # Timeout in seconds for each summary request
+
+# Thread Categories
+# Categories are processed in order - first match wins
+# Use 'order' field to control sorting in the output
+categories:
+  # High Priority Work Email
+  - name: "Urgent Work"
+    order: 1
+    summary_prompt: "Summarize this urgent work email focusing on immediate action items, deadlines, and key decisions needed."
+    criteria:
+      from_patterns:
+        - "ceo@company\\.com"
+        - "urgent@.*"
+      subject_patterns:
+        - "URGENT"
+        - "ASAP"
+        - "Action Required"
+
+  # Regular Work Email  
+  - name: "Work Email"
+    order: 2
+    summary_prompt: "Summarize this work-related email focusing on action items, decisions, deadlines, and project updates."
+    criteria:
+      from_patterns:
+        - ".*@company\\.com"
+        - ".*@client\\.org"
+      subject_patterns:
+        - "\\[PROJECT.*\\]"
+        - "Meeting:"
+        - "Weekly Update"
+
+  # Code & Development
+  - name: "Development"
+    order: 3
+    summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
+    criteria:
+      from_patterns:
+        - "notifications@github\\.com"
+        - "noreply@gitlab\\.com"
+        - "alerts@datadog\\.com"
+        - ".*@atlassian\\.net"  # Jira
+      subject_patterns:
+        - "\\[.*\\].*Pull Request"
+        - "\\[.*\\].*Issue"
+        - "\\[JIRA\\]"
+        - "Deploy:"
+
+  # Financial & Business
+  - name: "Financial"
+    order: 4
+    summary_prompt: "Summarize this financial communication focusing on amounts, due dates, and required actions."
+    criteria:
+      from_patterns:
+        - ".*@bank\\.com"
+        - "accounting@.*"
+        - "invoices@.*"
+      subject_patterns:
+        - "Invoice"
+        - "Payment"
+        - "Receipt"
+        - "Statement"
+
+  # Newsletters & Updates
+  - name: "Newsletters"
+    order: 5
+    summary_prompt: "Provide a brief summary of the key topics and interesting points from this newsletter or update."
+    criteria:
+      subject_patterns:
+        - "Newsletter"
+        - "Weekly Digest"
+        - "Daily Brief"
+      headers:
+        "List-Unsubscribe": ".*"  # Likely a mailing list
+
+  # Travel & Logistics
+  - name: "Travel"
+    order: 6
+    summary_prompt: "Summarize travel details including dates, times, confirmation numbers, and important instructions."
+    criteria:
+      from_patterns:
+        - ".*@airline\\.com"
+        - ".*@hotel\\.com"
+        - "noreply@uber\\.com"
+        - ".*@booking\\.com"
+      subject_patterns:
+        - "Confirmation"
+        - "Booking"
+        - "Flight"
+        - "Itinerary"
+
+  # Security & Alerts
+  - name: "Security"
+    order: 7
+    summary_prompt: "Summarize this security notification focusing on the nature of the alert, affected systems, and required actions."
+    criteria:
+      from_patterns:
+        - "security@.*"
+        - "alerts@.*"
+        - "noreply@.*security.*"
+      subject_patterns:
+        - "Security Alert"
+        - "Login Attempt"
+        - "Password"
+        - "Verification"
+        - "Two-factor"
+
+  # Personal Email (catch-all)
+  - name: "Personal"
+    order: 99
+    summary_prompt: "Provide a brief, friendly summary of this personal email."
+    criteria: {}  # Empty criteria = catch-all for remaining emails
+
+# Important Senders
+# Emails from these patterns will be highlighted in the HTML report
+important_senders:
+  - "ceo@company\\.com"
+  - "boss@company\\.com"  
+  - "urgent@.*"
+  - "security@.*"
+  - "alerts@.*"
+
+# Output Configuration
+output_file: "inbox_summary.html"
+max_threads_per_category: 25
+
+# Optional: Advanced Gmail Settings
+# gmail:
+#   max_requests_per_minute: 100
+#   batch_size: 10
+#   query_filter: "is:unread"  # Only process unread emails
+
+# Optional: Custom Claude Settings
+# claude:
+#   model: "claude-3-haiku"    # Use faster model for quicker processing
+#   max_tokens: 150           # Limit summary length
