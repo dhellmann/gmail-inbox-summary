@@ -660,6 +660,50 @@ categories:
         - "URGENT"
         - "\\\\[HIGH PRIORITY\\\\]"
 
+  # Meeting invitations and calendar events
+  - name: "Meeting Invitations"
+    summary_prompt: "Summarize this meeting invitation, including meeting purpose, time, and participants."
+    criteria:
+      from_patterns:
+        - ".*@calendar\\\\.google\\\\.com"
+        - ".*calendar.*"
+        - ".*outlook.*"
+      subject_patterns:
+        - "Invitation:"
+        - "Meeting:"
+        - "Cancelled:"
+        - "Updated:"
+        - "Reminder:"
+        - "Calendar:"
+      content_patterns:
+        - "has invited you"
+        - "meeting"
+        - "zoom\\\\.us"
+        - "teams\\\\.microsoft\\\\.com"
+        - "webex\\\\.com"
+
+  # Updates and notifications
+  - name: "Updates"
+    summary_prompt: "Summarize this update notification, focusing on what changed and any required actions."
+    criteria:
+      subject_patterns:
+        - "Update:"
+        - "Updates"
+        - "Notification:"
+        - "Alert:"
+        - "Status:"
+        - "Report:"
+        - "Summary:"
+        - "Weekly Summary"
+        - "Monthly Report"
+        - "System Update"
+        - "Security Update"
+      content_patterns:
+        - "has been updated"
+        - "new version"
+        - "status update"
+        - "important update"
+
   # Development notifications (GitHub, GitLab, etc.)
   - name: "Development"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
