@@ -17,6 +17,7 @@ from rich.progress import TimeElapsedColumn
 from rich.prompt import Prompt
 from rich.table import Table
 
+from .cache_manager import CacheManager
 from .config import Config
 from .config import get_default_config_path
 from .credential_manager import CredentialManager
@@ -27,6 +28,7 @@ from .llm_summarizer import LLMSummarizer
 from .thread_processor import ThreadProcessor
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -66,6 +68,12 @@ def cli() -> None:
 @cli.group()
 def creds() -> None:
     """Manage Gmail credentials in keychain."""
+    pass
+
+
+@cli.group()
+def cache() -> None:
+    """Manage cache for email threads and summaries."""
     pass
 
 
@@ -343,6 +351,11 @@ def run(
                 processor = ThreadProcessor(app_config)
                 progress.advance(task)
 
+                # Cache manager
+                task = progress.add_task("Initializing cache...", total=1)
+                cache_manager = CacheManager()
+                progress.advance(task)
+
                 # LLM summarizer (skip if dry run)
                 if not dry_run:
                     task = progress.add_task(
@@ -447,11 +460,39 @@ def run(
                             "summary_prompt": "Provide a brief summary of this email thread."
                         }
 
-                    # Process each thread with progress updates
+                    # Process each thread with progress updates and caching
                     for thread_data in threads:
-                        summarized_thread = summarizer.summarize_thread(
-                            thread_data, category_config
-                        )
+                        thread_id = thread_data["thread"]["id"]
+                        messages = thread_data["messages"]
+
+                        # Check cache first
+                        if cache_manager.is_thread_cached(thread_id, messages):
+                            cached_summary = cache_manager.get_cached_summary(thread_id)
+                            if cached_summary:
+                                # Use cached summary
+                                summarized_thread = cached_summary["summary_data"]
+                                logger.debug(
+                                    f"Using cached summary for thread {thread_id}"
+                                )
+                            else:
+                                # Generate new summary
+                                summarized_thread = summarizer.summarize_thread(
+                                    thread_data, category_config
+                                )
+                                # Cache the new summary
+                                cache_manager.cache_thread_and_summary(
+                                    thread_id, messages, thread_data, summarized_thread
+                                )
+                        else:
+                            # Thread content changed or not cached, generate new summary
+                            summarized_thread = summarizer.summarize_thread(
+                                thread_data, category_config
+                            )
+                            # Cache the new summary
+                            cache_manager.cache_thread_and_summary(
+                                thread_id, messages, thread_data, summarized_thread
+                            )
+
                         summarized_threads[category_name].append(summarized_thread)
                         threads_processed += 1
 
@@ -485,6 +526,10 @@ def run(
                     border_style="green",
                 )
             )
+
+            # Save cache and cleanup
+            cache_manager.save()
+            cache_manager.cleanup_old_entries(max_age_days=30)
 
         finally:
             # Ensure Gmail client connection is closed
@@ -713,6 +758,111 @@ output_file: "inbox_summary.html"
 # max_threads_per_category: null  # null/None for unlimited (default), or set a number like 50
 '''
     return template
+
+
+# Cache management commands
+
+
+@cache.command("status")
+def cache_status() -> None:
+    """Show cache status and statistics."""
+    setup_logging()
+
+    try:
+        cache_manager = CacheManager()
+        stats = cache_manager.get_cache_stats()
+
+        console.print("\n[bold]Cache Status[/bold]")
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Setting")
+        table.add_column("Value")
+
+        table.add_row("Cache Directory", str(stats["cache_directory"]))
+        table.add_row("Cached Threads", str(stats["cached_threads"]))
+        table.add_row("Cached Summaries", str(stats["cached_summaries"]))
+
+        # Convert bytes to human readable
+        threads_size = stats["threads_cache_size_bytes"]
+        summaries_size = stats["summaries_cache_size_bytes"]
+        total_size = threads_size + summaries_size
+
+        def format_bytes(bytes_val: int) -> str:
+            if bytes_val < 1024:
+                return f"{bytes_val} B"
+            elif bytes_val < 1024 * 1024:
+                return f"{bytes_val / 1024:.1f} KB"
+            else:
+                return f"{bytes_val / (1024 * 1024):.1f} MB"
+
+        table.add_row("Threads Cache Size", format_bytes(threads_size))
+        table.add_row("Summaries Cache Size", format_bytes(summaries_size))
+        table.add_row("Total Cache Size", format_bytes(total_size))
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error checking cache status: {e}[/red]")
+        raise click.Abort() from e
+
+
+@cache.command("clear")
+@click.option("--force", "-f", is_flag=True, help="Clear cache without confirmation")
+def cache_clear(force: bool) -> None:
+    """Clear all cached data."""
+    setup_logging()
+
+    if not force:
+        if not click.confirm("Are you sure you want to clear all cached data?"):
+            console.print("[yellow]Cache clear cancelled[/yellow]")
+            return
+
+    try:
+        cache_manager = CacheManager()
+        stats_before = cache_manager.get_cache_stats()
+
+        cache_manager.clear_cache()
+
+        console.print(
+            f"[green]✓ Cache cleared successfully[/green]\n"
+            f"Removed {stats_before['cached_threads']} threads "
+            f"and {stats_before['cached_summaries']} summaries"
+        )
+
+    except Exception as e:
+        console.print(f"[red]Error clearing cache: {e}[/red]")
+        raise click.Abort() from e
+
+
+@cache.command("cleanup")
+@click.option(
+    "--max-age",
+    "-a",
+    type=int,
+    default=30,
+    help="Maximum age in days for cache entries (default: 30)",
+)
+def cache_cleanup(max_age: int) -> None:
+    """Remove old cache entries."""
+    setup_logging()
+
+    try:
+        cache_manager = CacheManager()
+        removed_count = cache_manager.cleanup_old_entries(max_age_days=max_age)
+
+        if removed_count > 0:
+            console.print(
+                f"[green]✓ Removed {removed_count} old cache entries[/green]\n"
+                f"Entries older than {max_age} days have been cleaned up"
+            )
+        else:
+            console.print(
+                f"[blue]No cache entries older than {max_age} days found[/blue]"
+            )
+
+    except Exception as e:
+        console.print(f"[red]Error cleaning up cache: {e}[/red]")
+        raise click.Abort() from e
 
 
 if __name__ == "__main__":

@@ -552,3 +552,27 @@ def test_config_generate_help() -> None:
     assert "--email" in result.output
     assert "--output" in result.output
     assert "--force" in result.output
+
+
+def test_cache_commands() -> None:
+    """Test cache management commands."""
+    runner = CliRunner()
+
+    # Test cache status command
+    result = runner.invoke(cli, ["cache", "status"])
+    assert result.exit_code == 0
+    assert "Cache Status" in result.output or "Cache Directory" in result.output
+
+    # Test cache help
+    result = runner.invoke(cli, ["cache", "--help"])
+    assert result.exit_code == 0
+    assert "Manage cache" in result.output
+
+    # Test cache clear with dry run (no force)
+    result = runner.invoke(cli, ["cache", "clear"], input="n\n")
+    assert result.exit_code == 0
+    assert "Cache clear cancelled" in result.output
+
+    # Test cache cleanup
+    result = runner.invoke(cli, ["cache", "cleanup"])
+    assert result.exit_code == 0
