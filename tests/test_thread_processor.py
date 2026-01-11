@@ -251,10 +251,18 @@ def test_gmail_url_generation() -> None:
         == "https://mail.google.com/mail/u/0/#search/subject:Test%20Subject"
     )
 
-    # Test Gmail API thread ID
-    api_thread = {"id": "1234567890abcdef"}
-    api_url = processor._generate_gmail_url(api_thread)
-    assert api_url == "https://mail.google.com/mail/u/0/#inbox/1234567890abcdef"
+    # Test real Gmail thread ID (alphanumeric hash)
+    real_gmail_thread = {"id": "FMfcgzQfBPzBbMSrTZScLmNbBxglgBrM"}
+    real_url = processor._generate_gmail_url(real_gmail_thread)
+    assert (
+        real_url
+        == "https://mail.google.com/mail/u/0/#inbox/FMfcgzQfBPzBbMSrTZScLmNbBxglgBrM"
+    )
+
+    # Test short thread ID (falls back to search)
+    short_thread = {"id": "123"}
+    short_url = processor._generate_gmail_url(short_thread, "Test Subject")
+    assert short_url == "https://mail.google.com/mail/u/0/#inbox/123"
 
     # Test empty thread ID
     empty_thread = {"id": ""}

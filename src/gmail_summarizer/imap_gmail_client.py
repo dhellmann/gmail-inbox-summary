@@ -166,7 +166,7 @@ class ImapGmailClient:
                             if isinstance(response_item, bytes)
                             else str(response_item)
                         )
-                    match = re.search(r"X-GM-THRID (\d+)", response)
+                    match = re.search(r"X-GM-THRID ([A-Za-z0-9]+)", response)
                     if match:
                         thread_id = match.group(1)
                     else:
@@ -316,10 +316,15 @@ class ImapGmailClient:
                     labels_str = labels_match.group(1)
                     message_data["label_ids"] = self._parse_gmail_labels(labels_str)
 
-                # Extract Gmail thread ID
-                thread_match = re.search(r"X-GM-THRID (\d+)", response_line)
+                # Extract Gmail thread ID (can be numeric or alphanumeric hash)
+                thread_match = re.search(r"X-GM-THRID ([A-Za-z0-9]+)", response_line)
                 if thread_match:
                     message_data["thread_id"] = thread_match.group(1)
+
+                # Extract Gmail message ID
+                msgid_match = re.search(r"X-GM-MSGID ([A-Za-z0-9]+)", response_line)
+                if msgid_match:
+                    message_data["gmail_message_id"] = msgid_match.group(1)
 
         except Exception as e:
             logger.error(f"Error parsing message response: {e}")

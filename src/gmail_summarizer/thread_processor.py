@@ -333,8 +333,11 @@ class ThreadProcessor:
         """
         thread_id = thread.get("id", "")
 
-        # Handle IMAP-style thread IDs by using search instead of direct links
-        if thread_id.startswith("thread_"):
+        # Check if we have a real Gmail thread ID (alphanumeric hash)
+        if thread_id and not thread_id.startswith("thread_") and len(thread_id) > 10:
+            # Use real Gmail thread ID for direct link
+            return f"https://mail.google.com/mail/u/0/#inbox/{thread_id}"
+        elif thread_id.startswith("thread_"):
             # For IMAP threads, search by subject since we don't have real Gmail thread IDs
             if subject and subject != "No Subject":
                 # URL encode the subject and create a search URL
@@ -346,5 +349,5 @@ class ThreadProcessor:
                 # Fallback to generic inbox if no subject
                 return "https://mail.google.com/mail/u/0/#inbox"
         else:
-            # For actual Gmail API thread IDs (if using Gmail API in the future)
+            # For any other thread ID format
             return f"https://mail.google.com/mail/u/0/#inbox/{thread_id}"
