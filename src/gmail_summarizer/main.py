@@ -633,7 +633,7 @@ def _generate_config_template(email: str) -> str:
     Returns:
         Configuration file content as YAML string
     """
-    template = f'''# Gmail Inbox Summary Configuration
+    template = f"""# Gmail Inbox Summary Configuration
 # Generated configuration file with example content
 
 # Gmail IMAP Configuration
@@ -672,13 +672,16 @@ categories:
   - name: "Newsletters"
     summary_prompt: "Provide a brief summary of this newsletter or promotional email, highlighting key offers or information."
     criteria:
-      labels:
-        - "CATEGORY_PROMOTIONS"
-        - "CATEGORY_UPDATES"
+      from_patterns:
+        - ".*@substack\\\\\\\\.com"
+        - ".*@mail\\\\\\\\..*"
+        - ".*newsletter.*"
+        - ".*@mailchimp.*"
       subject_patterns:
         - "Newsletter"
-        - "Weekly Update"
-        - "Monthly Digest"
+        - "Weekly.*"
+        - "Monthly.*"
+        - "Digest"
 
   # Important/urgent emails
   - name: "Important Messages"
@@ -705,7 +708,7 @@ important_senders:
 # Output Configuration
 output_file: "inbox_summary.html"
 # max_threads_per_category: null  # null/None for unlimited (default), or set a number like 50
-'''
+"""
     return template
 
 

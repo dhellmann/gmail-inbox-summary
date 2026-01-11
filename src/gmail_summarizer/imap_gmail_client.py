@@ -231,9 +231,8 @@ class ImapGmailClient:
             return None
 
         try:
-            # Fetch message with headers, labels, and thread ID using PEEK to avoid marking as read
-            # BODY.PEEK[HEADER] and BODY.PEEK[TEXT] don't change message flags (unlike RFC822.HEADER/TEXT)
-            fetch_items = "(BODY.PEEK[HEADER] BODY.PEEK[TEXT] INTERNALDATE"
+            # Fetch message with headers and full body using PEEK to avoid marking as read
+            fetch_items = "(BODY.PEEK[] INTERNALDATE"
             if self.gmail_extensions:
                 fetch_items += " X-GM-LABELS X-GM-THRID X-GM-MSGID)"
             else:
@@ -279,28 +278,23 @@ class ImapGmailClient:
         }
 
         try:
-            # Parse the fetch response
-            response_parts = []
-            for item in data:
-                if isinstance(item, tuple) and len(item) == 2:
-                    response_parts.append(item[1])
-                elif isinstance(item, bytes):
-                    response_parts.append(item)
+            # Parse the fetch response - with BODY.PEEK[], data[0][1] contains the full message
+            raw_message = None
+            response_line = ""
 
-            # Join response parts
-            raw_response = b"".join(response_parts)
+            if data and isinstance(data[0], tuple) and len(data[0]) == 2:
+                response_line = (
+                    data[0][0].decode()
+                    if isinstance(data[0][0], bytes)
+                    else str(data[0][0])
+                )
+                raw_message = data[0][1]
 
-            # Split into header and body parts
-            header_end = raw_response.find(b"\r\n\r\n")
-            if header_end != -1:
-                header_data = raw_response[:header_end]
-                body_data = raw_response[header_end + 4 :]
-            else:
-                header_data = raw_response
-                body_data = b""
+            if raw_message is None:
+                return message_data
 
-            # Parse email message
-            msg = email.message_from_bytes(header_data + b"\r\n\r\n" + body_data)
+            # Parse email message from the complete message data
+            msg = email.message_from_bytes(raw_message)
 
             # Extract headers
             message_data["headers"] = dict(msg.items())
@@ -314,14 +308,8 @@ class ImapGmailClient:
             message_data["body"] = body
             message_data["snippet"] = self._create_snippet(body)
 
-            # Parse Gmail-specific data from first response item if available
-            if data and isinstance(data[0], tuple):
-                response_line = (
-                    data[0][0].decode()
-                    if isinstance(data[0][0], bytes)
-                    else str(data[0][0])
-                )
-
+            # Parse Gmail-specific data from response line
+            if response_line:
                 # Extract Gmail labels
                 labels_match = re.search(r"X-GM-LABELS \(([^)]+)\)", response_line)
                 if labels_match:

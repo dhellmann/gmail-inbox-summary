@@ -89,38 +89,38 @@ class ThreadProcessor:
             True if message matches all criteria
         """
         # Check Gmail labels
-        if "labels" in criteria:
+        if criteria.get("labels"):
             required_labels = criteria["labels"]
             message_labels = message.get("label_ids", [])
             if not any(label in message_labels for label in required_labels):
                 return False
 
         # Check sender patterns (From header)
-        if "from_patterns" in criteria:
+        if criteria.get("from_patterns"):
             from_address = message.get("from", "")
             if not self._matches_patterns(from_address, criteria["from_patterns"]):
                 return False
 
         # Check recipient patterns (To header)
-        if "to_patterns" in criteria:
+        if criteria.get("to_patterns"):
             to_address = message.get("to", "")
             if not self._matches_patterns(to_address, criteria["to_patterns"]):
                 return False
 
         # Check subject patterns
-        if "subject_patterns" in criteria:
+        if criteria.get("subject_patterns"):
             subject = message.get("subject", "")
             if not self._matches_patterns(subject, criteria["subject_patterns"]):
                 return False
 
         # Check message content patterns
-        if "content_patterns" in criteria:
+        if criteria.get("content_patterns"):
             body = message.get("body", "")
             if not self._matches_patterns(body, criteria["content_patterns"]):
                 return False
 
         # Check custom headers
-        if "headers" in criteria:
+        if criteria.get("headers"):
             headers = message.get("headers", {})
             for header_name, header_pattern in criteria["headers"].items():
                 header_value = headers.get(header_name, "")
