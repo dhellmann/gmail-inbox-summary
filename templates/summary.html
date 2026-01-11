@@ -231,6 +231,12 @@
             font-weight: 500;
         }
 
+        .thread-date {
+            font-size: 0.8em;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
         .thread-summary {
             background: #f8f9fa;
             border-radius: 6px;
@@ -349,6 +355,9 @@
                                 <span>{{ thread.message_count }} message{{ 's' if thread.message_count != 1 else '' }}</span>
                                 {% if thread.participants %}
                                 <span class="participant-count" data-tooltip="{{ thread.participants | join(', ') | e }}">{{ thread.participants | length }} participant{{ 's' if thread.participants | length != 1 else '' }}</span>
+                                {% endif %}
+                                {% if thread.most_recent_date %}
+                                <span class="thread-date">{{ thread.most_recent_date | format_date }}</span>
                                 {% endif %}
                             </div>
                         </div>

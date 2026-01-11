@@ -204,6 +204,7 @@ class ThreadProcessor:
                     "subject": self._extract_thread_subject(messages),
                     "participants": self._extract_participants(messages),
                     "message_count": len(messages),
+                    "most_recent_date": self._extract_most_recent_date(messages),
                     "gmail_url": self._generate_gmail_url(
                         thread, self._extract_thread_subject(messages), messages
                     ),
@@ -264,6 +265,60 @@ class ThreadProcessor:
                     participants.add(addr.strip())
 
         return list(participants)
+
+    def _extract_most_recent_date(self, messages: list[dict[str, Any]]) -> int:
+        """Extract the most recent message date from a thread.
+
+        Args:
+            messages: List of message data
+
+        Returns:
+            Most recent internal_date as timestamp (int), or 0 if not found
+        """
+        most_recent = 0
+
+        for message in messages:
+            # Use internal_date (Gmail's timestamp) for accurate sorting
+            internal_date = message.get("internal_date")
+
+            if internal_date:
+                try:
+                    # internal_date is a string timestamp in milliseconds
+                    timestamp = int(internal_date)
+                    if timestamp > most_recent:
+                        most_recent = timestamp
+                except (ValueError, TypeError):
+                    # Fallback: try to parse Date header
+                    date_header = message.get("date", "")
+                    if date_header:
+                        try:
+                            from email.utils import parsedate_to_datetime
+
+                            parsed_date = parsedate_to_datetime(date_header)
+                            timestamp = int(
+                                parsed_date.timestamp() * 1000
+                            )  # Convert to milliseconds
+                            if timestamp > most_recent:
+                                most_recent = timestamp
+                        except Exception:
+                            continue
+            else:
+                # No internal_date, try to parse Date header
+                date_header = message.get("date", "")
+                if date_header:
+                    try:
+                        from email.utils import parsedate_to_datetime
+
+                        parsed_date = parsedate_to_datetime(date_header)
+                        timestamp = int(
+                            parsed_date.timestamp() * 1000
+                        )  # Convert to milliseconds
+                        if timestamp > most_recent:
+                            most_recent = timestamp
+                    except Exception:
+                        continue
+
+        return most_recent
 
     def get_category_summary(
         self, categorized_threads: dict[str, list[dict[str, Any]]]

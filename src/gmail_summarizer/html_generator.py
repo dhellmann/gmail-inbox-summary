@@ -64,9 +64,32 @@ class HTMLGenerator:
                 return clean_email.split("@")[1]
             return clean_email
 
+        def format_date(timestamp: int) -> str:
+            """Format timestamp to readable date."""
+            if timestamp == 0:
+                return ""
+            try:
+                # Convert milliseconds to seconds for datetime
+                dt = datetime.fromtimestamp(timestamp / 1000)
+                now = datetime.now()
+
+                # If today, show time only
+                if dt.date() == now.date():
+                    return dt.strftime("%I:%M %p")
+
+                # If this year, show month/day
+                if dt.year == now.year:
+                    return dt.strftime("%b %d")
+
+                # Otherwise show month/day/year
+                return dt.strftime("%b %d, %Y")
+            except (ValueError, OSError):
+                return ""
+
         self.jinja_env.filters["truncate_text"] = truncate_text
         self.jinja_env.filters["format_email"] = format_email
         self.jinja_env.filters["domain_from_email"] = domain_from_email
+        self.jinja_env.filters["format_date"] = format_date
 
     def generate_html_report(
         self,
@@ -130,14 +153,16 @@ class HTMLGenerator:
             if category_name in summarized_threads:
                 threads = summarized_threads[category_name]
                 if threads:  # Only include categories with threads
-                    # Sort threads within category by importance and then by subject
+                    # Sort threads within category by importance and then by most recent date (newest first)
                     sorted_threads_in_category = sorted(
                         threads,
                         key=lambda t: (
                             not t.get(
                                 "has_important_sender", False
                             ),  # Important first (False < True)
-                            t.get("subject", "").lower(),
+                            -t.get(
+                                "most_recent_date", 0
+                            ),  # Newest first (negative for reverse order)
                         ),
                     )
                     sorted_threads[category_name] = sorted_threads_in_category
