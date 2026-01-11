@@ -362,7 +362,7 @@ def run(
                 # Get threads data
                 threads_data = []
                 for thread in gmail_client.get_inbox_threads():
-                    messages = gmail_client.get_thread_messages(thread["id"])
+                    messages = gmail_client.get_thread_messages(thread)
                     threads_data.append((thread, messages))
                     progress.update(
                         task, description=f"Fetched {len(threads_data)} threads..."
