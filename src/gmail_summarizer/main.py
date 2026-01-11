@@ -655,7 +655,7 @@ categories:
     summary_prompt: "Summarize this important email, highlighting urgency and required actions."
     criteria:
       labels:
-        - "IMPORTANT"
+        - "is:important"
       subject_patterns:
         - "URGENT"
         - "\\\\[HIGH PRIORITY\\\\]"

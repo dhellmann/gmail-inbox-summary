@@ -120,10 +120,14 @@ class ThreadProcessor:
         if criteria.get("labels"):
             criteria_tested = True
             required_labels = criteria["labels"]
-            match_result = any(label in message_labels for label in required_labels)
+            # Normalize Gmail search syntax (is:important → IMPORTANT)
+            normalized_labels = [
+                self._normalize_gmail_label(label) for label in required_labels
+            ]
+            match_result = any(label in message_labels for label in normalized_labels)
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(
-                    f"  Labels check: {match_result} (required: {required_labels}, message has: {message_labels})"
+                    f"  Labels check: {match_result} (required: {required_labels} → normalized: {normalized_labels}, message has: {message_labels})"
                 )
             if match_result:
                 any_match = True
@@ -267,6 +271,41 @@ class ThreadProcessor:
         except re.error as e:
             logger.warning(f"Invalid regex pattern '{pattern}': {e}")
             return False
+
+    def _normalize_gmail_label(self, label: str) -> str:
+        """Normalize Gmail search syntax labels to internal format.
+
+        Converts Gmail search syntax like 'is:important' to internal labels like 'IMPORTANT'.
+
+        Args:
+            label: Label in Gmail search syntax (e.g., 'is:important')
+
+        Returns:
+            Normalized internal label name
+        """
+        # Gmail search syntax mapping
+        gmail_search_map = {
+            "is:important": "IMPORTANT",
+            "is:starred": "STARRED",
+            "is:unread": "UNREAD",
+            "is:read": "READ",
+            "is:sent": "SENT",
+            "is:draft": "DRAFT",
+            "is:inbox": "INBOX",
+            "is:spam": "SPAM",
+            "is:trash": "TRASH",
+            "is:chat": "CHAT",
+        }
+
+        # Convert to lowercase for case-insensitive matching
+        label_lower = label.lower()
+
+        # If it's Gmail search syntax, convert it
+        if label_lower in gmail_search_map:
+            return gmail_search_map[label_lower]
+
+        # Otherwise return as-is (for custom labels or other formats)
+        return label
 
     def is_important_sender(self, message: dict[str, Any]) -> bool:
         """Check if message is from an important sender.

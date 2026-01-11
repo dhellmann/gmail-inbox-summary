@@ -247,7 +247,9 @@ categories:
 
       # Match Gmail labels
       labels:
-        - "IMPORTANT"
+        - "is:important"     # Gmail search syntax (recommended)
+        - "is:starred"       # Gmail search syntax (recommended)
+        - "IMPORTANT"        # Internal label format (also supported)
         - "CATEGORY_PROMOTIONS"
 ```
 
@@ -256,6 +258,23 @@ categories:
 - Use regex patterns with proper escaping: `\\.` for literal dots
 - Patterns are case-insensitive by default
 - Empty criteria `{}` or criteria with all empty lists creates a catch-all category that matches all emails
+
+**Gmail Label Syntax:**
+
+- **Recommended**: Use Gmail's familiar search syntax like `is:important`, `is:starred`, `is:unread`
+- **Also supported**: Internal label format like `IMPORTANT`, `STARRED`, `UNREAD`
+- The tool automatically converts Gmail search syntax to the internal format
+- Supported Gmail search labels:
+  - `is:important` → `IMPORTANT`
+  - `is:starred` → `STARRED`
+  - `is:unread` → `UNREAD`
+  - `is:read` → `READ`
+  - `is:sent` → `SENT`
+  - `is:draft` → `DRAFT`
+  - `is:inbox` → `INBOX`
+  - `is:spam` → `SPAM`
+  - `is:trash` → `TRASH`
+  - `is:chat` → `CHAT`
 
 ### Advanced Configuration Options
 
