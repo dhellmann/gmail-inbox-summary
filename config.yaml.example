@@ -30,7 +30,7 @@ categories:
 
   # Meeting invitations and calendar events
   - name: "Meeting Invitations"
-    summary_prompt: "Summarize this meeting invitation, including meeting purpose, time, and participants."
+    summary_prompt: "Summarize this meeting-related message concisely. For new invitations: include who invited me, meeting purpose, and time. For accept/decline responses: only mention the response unless a reason for declining was given."
     criteria:
       labels:
         - "meeting-invitation"  # Custom label for meeting invitations
