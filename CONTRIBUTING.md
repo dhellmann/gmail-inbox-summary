@@ -166,17 +166,17 @@ We use modern Python practices with the following tools:
 from typing import Any
 
 def process_threads(
-    self, 
+    self,
     categorized_threads: dict[str, list[dict[str, Any]]]
 ) -> dict[str, list[dict[str, Any]]]:
     """Process threads and return categorized results.
-    
+
     Args:
         categorized_threads: Dictionary mapping category names to thread lists
-        
+
     Returns:
         Processed categorized threads
-        
+
     Raises:
         ProcessingError: If thread processing fails
     """
@@ -202,10 +202,10 @@ def test_feature_functionality():
     # Arrange
     mock_config = Mock()
     mock_config.get_setting.return_value = "test_value"
-    
+
     # Act
     result = your_function(mock_config)
-    
+
     # Assert
     assert result == expected_value
     mock_config.get_setting.assert_called_once_with("setting_name")

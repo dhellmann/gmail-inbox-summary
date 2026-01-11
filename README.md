@@ -126,7 +126,7 @@ output_file: "inbox_summary.html"
 # Generate a configuration file (first time setup)
 gmail-summary config generate --email your.email@gmail.com
 
-# Store credentials securely 
+# Store credentials securely
 gmail-summary creds store --email your.email@gmail.com
 
 # Test Claude CLI connection
@@ -283,7 +283,7 @@ Main Command:
 
 Test Command:
   gmail-summary test-claude [OPTIONS]
-  
+
   Options:
     -c, --config PATH      Configuration file path (default: platform-specific)
     -v, --verbose         Enable verbose logging
