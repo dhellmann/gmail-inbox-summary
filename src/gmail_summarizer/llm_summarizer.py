@@ -259,8 +259,11 @@ class LLMSummarizer:
 
                 # Check cache first if cache manager available
                 cached_summary = None
+                prompt = category_config.get(
+                    "summary_prompt", "Provide a brief summary of this email thread."
+                )
                 if cache_manager and cache_manager.is_thread_cached(
-                    thread_id, messages
+                    thread_id, messages, prompt
                 ):
                     cached_summary = cache_manager.get_cached_summary(thread_id)
 
@@ -273,6 +276,7 @@ class LLMSummarizer:
                         "thread_id": thread_id,
                         "messages": messages,
                         "cached_summary": cached_summary,
+                        "prompt": prompt,
                     }
                 )
 
@@ -304,6 +308,7 @@ class LLMSummarizer:
                     task_info["messages"],
                     task_info["thread_data"],
                     summarized_thread,
+                    task_info["prompt"],
                 )
 
             return {

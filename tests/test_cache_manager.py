@@ -359,3 +359,86 @@ def test_invalid_cache_files() -> None:
         # Should have empty caches after failing to load corrupted data
         assert len(cache_manager._threads_cache) == 0
         assert len(cache_manager._summaries_cache) == 0
+
+
+def test_prompt_based_cache_invalidation() -> None:
+    """Test that cache is invalidated when prompt changes."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_manager = CacheManager(Path(temp_dir))
+
+        # Test data
+        thread_id = "thread_123"
+        messages = [
+            {
+                "id": "msg1",
+                "subject": "Test Subject",
+                "from": "test@example.com",
+                "date": "2024-01-01",
+                "body": "Test message body",
+            }
+        ]
+        thread_data = {"thread": {"id": thread_id}, "messages": messages}
+        summary_data = {"summary": "Test summary"}
+
+        # First prompt
+        prompt1 = "Summarize this email briefly."
+
+        # Cache with first prompt
+        cache_manager.cache_thread_and_summary(
+            thread_id, messages, thread_data, summary_data, prompt1
+        )
+
+        # Should be cached with the same prompt
+        assert cache_manager.is_thread_cached(thread_id, messages, prompt1) is True
+
+        # Should NOT be cached with a different prompt
+        prompt2 = "Provide a detailed summary of this email."
+        assert cache_manager.is_thread_cached(thread_id, messages, prompt2) is False
+
+        # Cache with second prompt
+        summary_data2 = {"summary": "Detailed test summary"}
+        cache_manager.cache_thread_and_summary(
+            thread_id, messages, thread_data, summary_data2, prompt2
+        )
+
+        # Now should be cached with second prompt
+        assert cache_manager.is_thread_cached(thread_id, messages, prompt2) is True
+
+        # Still should not be cached with first prompt (overwritten)
+        assert cache_manager.is_thread_cached(thread_id, messages, prompt1) is False
+
+        # Verify that the cached summary corresponds to the current prompt
+        cached_summary = cache_manager.get_cached_summary(thread_id)
+        assert cached_summary is not None
+        assert cached_summary["prompt"] == prompt2
+        assert cached_summary["summary_data"] == summary_data2
+
+
+def test_prompt_included_in_hash() -> None:
+    """Test that prompt is included in content hash calculation."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_manager = CacheManager(Path(temp_dir))
+
+        messages = [
+            {
+                "id": "msg1",
+                "subject": "Test",
+                "from": "test@example.com",
+                "date": "2024-01-01",
+                "body": "Test",
+            }
+        ]
+
+        # Same messages, different prompts should produce different hashes
+        hash1 = cache_manager._calculate_thread_hash(messages, "Brief summary")
+        hash2 = cache_manager._calculate_thread_hash(messages, "Detailed summary")
+        hash3 = cache_manager._calculate_thread_hash(messages, "")  # Empty prompt
+
+        # All hashes should be different
+        assert hash1 != hash2
+        assert hash1 != hash3
+        assert hash2 != hash3
+
+        # Same messages and prompt should produce same hash
+        hash1_repeat = cache_manager._calculate_thread_hash(messages, "Brief summary")
+        assert hash1 == hash1_repeat

@@ -93,14 +93,17 @@ class CacheManager:
         except Exception as e:
             logger.error(f"Failed to save cache files: {e}")
 
-    def _calculate_thread_hash(self, messages: list[dict[str, Any]]) -> str:
-        """Calculate hash of thread content for change detection.
+    def _calculate_thread_hash(
+        self, messages: list[dict[str, Any]], prompt: str = ""
+    ) -> str:
+        """Calculate hash of thread content and prompt for change detection.
 
         Args:
             messages: List of message data from the thread
+            prompt: Summary prompt used for this thread
 
         Returns:
-            SHA-256 hash of thread content
+            SHA-256 hash of thread content and prompt
         """
         # Create a stable representation of thread content
         content_parts = []
@@ -116,24 +119,29 @@ class CacheManager:
             }
             content_parts.append(json.dumps(msg_content, sort_keys=True))
 
-        # Create hash of all message content
+        # Create hash of all message content plus prompt
         combined_content = "\n".join(content_parts)
+        # Include prompt in hash so changing prompts invalidates cache
+        combined_content += f"\n__PROMPT__: {prompt}"
         return hashlib.sha256(combined_content.encode("utf-8")).hexdigest()
 
-    def is_thread_cached(self, thread_id: str, messages: list[dict[str, Any]]) -> bool:
-        """Check if thread is cached and content hasn't changed.
+    def is_thread_cached(
+        self, thread_id: str, messages: list[dict[str, Any]], prompt: str = ""
+    ) -> bool:
+        """Check if thread is cached and content/prompt haven't changed.
 
         Args:
             thread_id: Unique thread identifier
             messages: Current thread messages
+            prompt: Summary prompt used for this thread
 
         Returns:
-            True if thread is cached and content unchanged
+            True if thread is cached and content/prompt unchanged
         """
         if thread_id not in self._threads_cache:
             return False
 
-        current_hash = self._calculate_thread_hash(messages)
+        current_hash = self._calculate_thread_hash(messages, prompt)
         cached_hash = self._threads_cache[thread_id].get("content_hash")
 
         return current_hash == cached_hash
@@ -155,6 +163,7 @@ class CacheManager:
         messages: list[dict[str, Any]],
         thread_data: dict[str, Any],
         summary_data: dict[str, Any],
+        prompt: str = "",
     ) -> None:
         """Cache thread content and summary.
 
@@ -163,13 +172,15 @@ class CacheManager:
             messages: Thread messages for hash calculation
             thread_data: Complete thread data to cache
             summary_data: Generated summary data to cache
+            prompt: Summary prompt used for this thread
         """
-        content_hash = self._calculate_thread_hash(messages)
+        content_hash = self._calculate_thread_hash(messages, prompt)
 
         # Cache thread content with hash
         self._threads_cache[thread_id] = {
             "content_hash": content_hash,
             "thread_data": thread_data,
+            "prompt": prompt,  # Store prompt for reference
             "cached_at": self._get_current_timestamp(),
         }
 
@@ -177,6 +188,7 @@ class CacheManager:
         self._summaries_cache[thread_id] = {
             "summary_data": summary_data,
             "content_hash": content_hash,  # Link to content hash
+            "prompt": prompt,  # Store prompt with summary too
             "cached_at": self._get_current_timestamp(),
         }
 
