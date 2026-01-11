@@ -649,6 +649,7 @@ claude:
   timeout: 30
 
 # Thread Categories - processed in order, first match wins
+# Categories are now organized by Gmail labels only for simpler and more reliable categorization
 categories:
   # Important/urgent emails - checked first for highest priority
   - name: "Important Messages"
@@ -657,140 +658,44 @@ categories:
       labels:
         - "is:important"  # Gmail's important label
         - "is:starred"    # Starred emails
-      subject_patterns:
-        - "URGENT"
-        - "\\\\[HIGH PRIORITY\\\\]"
-        - "Action Required"
-        - "\\\\[Action Required\\\\]"
-        - "ASAP"
-        - "Critical"
-        - "Immediate"
-        - "Time Sensitive"
-        - "Deadline"
-        - "\\\\[URGENT\\\\]"
-        - "\\\\[CRITICAL\\\\]"
-        - "Priority:"
-        - "HIGH PRIORITY"
-      from_patterns:
-        - "alerts@.*"  # Alert emails
-        - "security@.*"  # Security alerts
-        - "admin@.*"  # Admin notifications
-        - ".*escalation.*@.*"  # Escalation emails
-        - ".*emergency.*@.*"  # Emergency notifications
 
   # Meeting invitations and calendar events
   - name: "Meeting Invitations"
     summary_prompt: "Summarize this meeting invitation, including meeting purpose, time, and participants."
     criteria:
-      from_patterns:
-        - ".*calendar.*@.*\\\\.com"  # Matches calendar-*@google.com and similar
-        - ".*@calendar\\\\.google\\\\.com"
-        - ".*outlook.*"
-      subject_patterns:
-        - "Invitation:"
-        - "Meeting:"
-        - "Cancelled:"
-        - "Updated:"
-        - "Reminder:"
-        - "Calendar:"
-        - "Declined:"  # Added to catch meeting decline notifications
-        - "Accepted:"  # Added to catch meeting acceptance notifications
-      content_patterns:
-        - "has invited you"
-        - "meeting"
-        - "zoom\\\\.us"
-        - "teams\\\\.microsoft\\\\.com"
-        - "webex\\\\.com"
-        - "declined.*meeting"
-        - "accepted.*meeting"
       labels:
-        - "meeting-invitation"  # Custom label
-        - "is:important"        # Important meetings
+        - "meeting-invitation"  # Custom label for meeting invitations
 
   # Community discussions (Python, technical forums, etc.)
   - name: "Community"
     summary_prompt: "Summarize this community discussion, focusing on technical topics, questions, and community announcements."
     criteria:
-      from_patterns:
-        - ".*@python.*\\\\.discoursemail\\\\.com"  # Python discussions
-        - ".*@discuss\\\\.python\\\\.org"  # Python mailing lists
-      subject_patterns:
-        - "\\\\[Py\\\\]"  # Python mailing list prefix
+      labels:
+        - "List/python-discuss"  # Python mailing list discussions
 
-  # Development notifications (GitHub, GitLab, etc.)
-  - name: "Development"
+  # Development notifications (GitHub, GitLab, etc.) - renamed from "Development" to "Code"
+  - name: "Code"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
     criteria:
-      from_patterns:
-        - "notifications@github\\\\.com"
-        - "noreply@github\\\\.com"
-        - ".*@noreply\\\\.github\\\\.com"  # Broader GitHub pattern
-        - ".*@gitlab\\\\.com"  # Broader GitLab pattern (not just noreply)
-        - "gitlab@.*\\\\.gitlab\\\\.com"  # GitLab notification patterns
-        - "alerts@datadog\\\\.com"
-      subject_patterns:
-        - "\\\\[.*\\\\].*Pull Request"
-        - "\\\\[.*\\\\].*Merge Request"  # GitLab
-        - "\\\\[.*\\\\].*Issue"
-        - "\\\\[.*\\\\].*merged"
-        - "Deploy:"
-        - "Re:.*\\\\|"  # GitLab MR reply pattern
-        - "builder \\\\|"  # GitLab project pattern
+      labels:
+        - "github"      # GitHub notifications
+        - "github-*"    # GitHub project-specific labels (uses fnmatch pattern matching)
+        - "gitlab"      # GitLab notifications
+        - "gitlab-*"    # GitLab project-specific labels (uses fnmatch pattern matching)
 
   # JIRA tickets and issue tracking
   - name: "JIRA"
     summary_prompt: "Summarize this JIRA ticket notification, highlighting the current status of the ticket, any status changes, priority updates, and required actions."
     criteria:
-      from_patterns:
-        - ".*@atlassian\\\\.net"  # Jira
-        - "jira-issues@.*"  # Red Hat JIRA and other JIRA instances
-      subject_patterns:
-        - "\\\\[.*JIRA.*\\\\]"  # Broader JIRA pattern
-        - "\\\\[RH JIRA\\\\]"  # Red Hat JIRA specific
+      labels:
+        - "jira"  # JIRA ticket notifications
 
-  # Google Docs and collaboration notifications
-  - name: "Updates"
-    summary_prompt: "Summarize this update notification, focusing on what changed and any required actions."
+  # Google Docs and collaboration notifications - new category
+  - name: "Documents"
+    summary_prompt: "Summarize this document notification, focusing on what changed and any required actions."
     criteria:
-      from_patterns:
-        - "comments-noreply@docs\\\\.google\\\\.com"  # Google Docs notifications
-        - ".*@notifications\\\\.google\\\\.com"  # Other Google notifications
-      subject_patterns:
-        - "Update:"
-        - "Updates"
-        - "Notification:"
-        - "Alert:"
-        - "Status:"
-        - "Report:"
-        - "Summary:"
-        - "Weekly Summary"
-        - "Monthly Report"
-        - "System Update"
-        - "Security Update"
-        - ".*edited.*"  # Google Docs edit notifications
-      content_patterns:
-        - "has been updated"
-        - "new version"
-        - "status update"
-        - "important update"
-        - "edited"
-
-  # Newsletter and promotional emails
-  - name: "Newsletters"
-    summary_prompt: "Provide a brief summary of this newsletter or promotional email, highlighting key offers or information."
-    criteria:
-      from_patterns:
-        - ".*@substack\\\\.com"
-        - ".*@mail\\\\..*"
-        - ".*newsletter.*"
-        - ".*@mailchimp.*"
-        - ".*@leaddev\\\\.com"  # Based on actual newsletters seen
-      subject_patterns:
-        - "Newsletter"
-        - "Weekly.*"
-        - "Monthly.*"
-        - "Digest"
-        - "LT#.*"  # Leadership in Tech newsletter pattern
+      labels:
+        - "google-docs"  # Google Docs notifications
 
   # Everything else (catch-all category)
   - name: "General Email"

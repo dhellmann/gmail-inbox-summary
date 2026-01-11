@@ -24,7 +24,7 @@ def test_valid_config_validation() -> None:
             {
                 "name": "Test Category",
                 "summary_prompt": "Test prompt",
-                "criteria": {"from_patterns": [".*@test\\.com"]},
+                "criteria": {"labels": ["test-label"]},
             }
         ],
         "important_senders": ["important@test\\.com"],
@@ -68,15 +68,17 @@ def test_invalid_email_validation() -> None:
         config_path.unlink()
 
 
-def test_invalid_regex_pattern_validation() -> None:
-    """Test that invalid regex patterns fail validation."""
+def test_label_only_criteria_validation() -> None:
+    """Test that label-only criteria works correctly."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
         "categories": [
             {
                 "name": "Test",
                 "summary_prompt": "Test prompt",
-                "criteria": {"from_patterns": ["[invalid_regex"]},  # Invalid regex
+                "criteria": {
+                    "labels": ["is:important", "custom-label"]
+                },  # Valid labels
             }
         ],
     }
@@ -86,8 +88,10 @@ def test_invalid_regex_pattern_validation() -> None:
         config_path = Path(f.name)
 
     try:
-        with pytest.raises(ValueError, match="Invalid configuration"):
-            Config(str(config_path))
+        config = Config(str(config_path))
+        categories = config.get_categories()
+        assert len(categories) == 1
+        assert categories[0]["criteria"]["labels"] == ["is:important", "custom-label"]
     finally:
         config_path.unlink()
 
@@ -269,11 +273,6 @@ def test_default_categories_created() -> None:
             == "Provide a brief summary of this email thread."
         )
         # Verify it's a catch-all category (empty criteria)
-        assert categories[0]["criteria"]["from_patterns"] == []
-        assert categories[0]["criteria"]["to_patterns"] == []
-        assert categories[0]["criteria"]["subject_patterns"] == []
-        assert categories[0]["criteria"]["content_patterns"] == []
-        assert categories[0]["criteria"]["headers"] == {}
         assert categories[0]["criteria"]["labels"] == []
     finally:
         config_path.unlink()
@@ -311,7 +310,7 @@ def test_no_default_category_when_categories_provided() -> None:
             {
                 "name": "Custom Category",
                 "summary_prompt": "Custom prompt",
-                "criteria": {"from_patterns": ["test@example.com"]},
+                "criteria": {"labels": ["test-label"]},
             }
         ],
     }
@@ -354,8 +353,8 @@ def test_unlimited_threads_per_category() -> None:
         config_path.unlink()
 
 
-def test_header_pattern_validation() -> None:
-    """Test that header patterns are properly validated."""
+def test_unknown_criteria_fields_rejected() -> None:
+    """Test that unknown criteria fields are rejected."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
         "categories": [
@@ -363,7 +362,8 @@ def test_header_pattern_validation() -> None:
                 "name": "Test",
                 "summary_prompt": "Test prompt",
                 "criteria": {
-                    "headers": {"List-Id": "[invalid_regex"}  # Invalid regex in header
+                    "labels": ["test"],
+                    "unknown_field": ["invalid"],  # Unknown field should be rejected
                 },
             }
         ],

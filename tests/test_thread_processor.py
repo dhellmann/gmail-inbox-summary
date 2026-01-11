@@ -406,53 +406,24 @@ def test_is_empty_criteria() -> None:
     # Test empty dict
     assert processor._is_empty_criteria({}) is True
 
-    # Test criteria with all empty lists
-    empty_criteria: dict[str, list[str] | dict[str, str]] = {
-        "from_patterns": [],
-        "to_patterns": [],
-        "subject_patterns": [],
-        "content_patterns": [],
-        "headers": {},
+    # Test criteria with empty labels
+    empty_criteria: dict[str, list[str]] = {
         "labels": [],
     }
     assert processor._is_empty_criteria(empty_criteria) is True
 
-    # Test criteria with some fields missing (should still be empty)
-    partial_empty: dict[str, list[str]] = {
-        "from_patterns": [],
-        "labels": [],
-    }
-    assert processor._is_empty_criteria(partial_empty) is True
-
-    # Test criteria with non-empty from_patterns
-    non_empty_from = {
-        "from_patterns": ["test@example.com"],
-        "to_patterns": [],
-        "subject_patterns": [],
-        "content_patterns": [],
-        "headers": {},
-        "labels": [],
-    }
-    assert processor._is_empty_criteria(non_empty_from) is False
+    # Test criteria with missing labels field
+    missing_labels: dict[str, list[str]] = {}
+    assert processor._is_empty_criteria(missing_labels) is True
 
     # Test criteria with non-empty labels
     non_empty_labels = {
-        "from_patterns": [],
-        "to_patterns": [],
-        "subject_patterns": [],
-        "content_patterns": [],
-        "headers": {},
         "labels": ["IMPORTANT"],
     }
     assert processor._is_empty_criteria(non_empty_labels) is False
 
-    # Test criteria with non-empty headers
-    non_empty_headers = {
-        "from_patterns": [],
-        "to_patterns": [],
-        "subject_patterns": [],
-        "content_patterns": [],
-        "headers": {"List-Id": "test@example.com"},
-        "labels": [],
+    # Test criteria with multiple labels
+    multiple_labels = {
+        "labels": ["is:important", "custom-label"],
     }
-    assert processor._is_empty_criteria(non_empty_headers) is False
+    assert processor._is_empty_criteria(multiple_labels) is False

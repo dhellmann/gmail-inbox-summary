@@ -304,25 +304,25 @@ Include in your PR description:
 
 ```markdown
 ## Summary
-Add support for Gmail label-based filtering
+Add pattern matching support for Gmail label filtering
 
 ## Motivation
-Users requested ability to filter emails by Gmail labels for better categorization.
+Users needed ability to match multiple related labels using wildcard patterns (e.g., "project-*" to match "project-alpha", "project-beta").
 
 ## Changes
-- Added `labels` criteria support in thread_processor.py
-- Updated configuration schema to accept label patterns
-- Added comprehensive tests for label filtering
-- Updated documentation with examples
+- Added fnmatch pattern support to label matching in thread_processor.py
+- Updated configuration documentation with pattern examples
+- Added comprehensive tests for pattern matching functionality
+- Updated examples to show label-based categorization
 
 ## Testing
-- Added unit tests for label filtering logic
-- Added integration test for end-to-end label filtering
-- Tested manually with various Gmail label configurations
+- Added unit tests for pattern matching logic
+- Added integration test for end-to-end label pattern filtering
+- Tested manually with various Gmail label pattern configurations
 - All existing tests continue to pass
 
 ## Breaking Changes
-None - this is backward compatible.
+None - this is backward compatible with existing exact label matches.
 ```
 
 ## Development Tips

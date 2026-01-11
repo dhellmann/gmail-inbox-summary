@@ -4,7 +4,7 @@
 # Gmail IMAP Configuration
 gmail:
   email_address: "your.email@gmail.com"          # Your Gmail address
-  password: "your-app-specific-password"         # Gmail app-specific password (recommended)
+  # password is stored securely in keychain - run: gmail-summary creds store
   imap_server: "imap.gmail.com"                  # Gmail IMAP server
   imap_port: 993                                 # Gmail IMAP port (SSL)
 
@@ -16,99 +16,56 @@ claude:
                         # Higher values = faster processing, more resources
                         # Example: concurrency: 10 for large inboxes
 
-# Thread Categories
+# Thread Categories - organized by Gmail labels for simple and reliable categorization
 # Categories are processed in order they appear below - first match wins
 # Categories are displayed in the same order they are defined here
 categories:
-  # High Priority Work Email
-  - name: "Urgent Work"
-    summary_prompt: "Summarize this urgent work email focusing on immediate action items, deadlines, and key decisions needed."
+  # Important/urgent emails - checked first for highest priority
+  - name: "Important Messages"
+    summary_prompt: "Summarize this important email, highlighting urgency and required actions."
     criteria:
-      from_patterns:
-        - "ceo@company\\.com"
-        - "urgent@.*"
-      subject_patterns:
-        - "URGENT"
-        - "ASAP"
-        - "Action Required"
+      labels:
+        - "is:important"  # Gmail's important label
+        - "is:starred"    # Starred emails
 
-  # Code & Development
-  - name: "Development"
+  # Meeting invitations and calendar events
+  - name: "Meeting Invitations"
+    summary_prompt: "Summarize this meeting invitation, including meeting purpose, time, and participants."
+    criteria:
+      labels:
+        - "meeting-invitation"  # Custom label for meeting invitations
+
+  # Community discussions (Python, technical forums, etc.)
+  - name: "Community"
+    summary_prompt: "Summarize this community discussion, focusing on technical topics, questions, and community announcements."
+    criteria:
+      labels:
+        - "List/python-discuss"  # Python mailing list discussions
+
+  # Development notifications (GitHub, GitLab, etc.)
+  - name: "Code"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
     criteria:
-      from_patterns:
-        - "notifications@github\\.com"
-        - "noreply@gitlab\\.com"
-        - "alerts@datadog\\.com"
-        - ".*@atlassian\\.net"  # Jira
-      subject_patterns:
-        - "\\[.*\\].*Pull Request"
-        - "\\[.*\\].*Merge Request"  # GitLab
-        - "\\[.*\\].*Issue"
-        - "\\[JIRA\\]"
-        - "Deploy:"
-        - "\\[.*\\].*merged"
-        - "\\[.*\\].*pipeline"  # GitLab CI/CD
+      labels:
+        - "github"      # GitHub notifications
+        - "github-*"    # GitHub project-specific labels (pattern matching)
+        - "gitlab"      # GitLab notifications
+        - "gitlab-*"    # GitLab project-specific labels (pattern matching)
 
-  # Financial & Business
-  - name: "Financial"
-    summary_prompt: "Summarize this financial communication focusing on amounts, due dates, and required actions."
+  # JIRA tickets and issue tracking
+  - name: "JIRA"
+    summary_prompt: "Summarize this JIRA ticket notification, highlighting the current status of the ticket, any status changes, priority updates, and required actions."
     criteria:
-      from_patterns:
-        - ".*@bank\\.com"
-        - "accounting@.*"
-        - "invoices@.*"
-      subject_patterns:
-        - "Invoice"
-        - "Payment"
-        - "Receipt"
-        - "Statement"
+      labels:
+        - "jira"  # JIRA ticket notifications
 
-  # Newsletters & Updates
-  - name: "Newsletters"
-    summary_prompt: "Provide a brief summary of the key topics and interesting points from this newsletter or update."
+  # Google Docs and collaboration notifications
+  - name: "Documents"
+    summary_prompt: "Summarize this document notification, focusing on what changed and any required actions."
     criteria:
-      subject_patterns:
-        - "Newsletter"
-        - "Weekly Digest"
-        - "Daily Brief"
-      headers:
-        "List-Unsubscribe": ".*"  # Likely a mailing list
+      labels:
+        - "google-docs"  # Google Docs notifications
 
-  # Travel & Logistics
-  - name: "Travel"
-    summary_prompt: "Summarize travel details including dates, times, confirmation numbers, and important instructions."
-    criteria:
-      from_patterns:
-        - ".*@airline\\.com"
-        - ".*@hotel\\.com"
-        - "noreply@uber\\.com"
-        - ".*@booking\\.com"
-      subject_patterns:
-        - "Confirmation"
-        - "Booking"
-        - "Flight"
-        - "Itinerary"
-
-  # Security & Alerts
-  - name: "Security"
-    summary_prompt: "Summarize this security notification focusing on the nature of the alert, affected systems, and required actions."
-    criteria:
-      from_patterns:
-        - "security@.*"
-        - "alerts@.*"
-        - "noreply@.*security.*"
-      subject_patterns:
-        - "Security Alert"
-        - "Login Attempt"
-        - "Password"
-        - "Verification"
-        - "Two-factor"
-
-  # Personal Email (catch-all)
-  - name: "Personal"
-    summary_prompt: "Provide a brief, friendly summary of this personal email."
-    criteria: {}  # Empty criteria = catch-all for remaining emails
 
 # Important Senders
 # Emails from these patterns will be highlighted in the HTML report
@@ -122,6 +79,28 @@ important_senders:
 # Output Configuration
 output_file: "inbox_summary.html"
 # max_threads_per_category: null  # null for unlimited (default), or set a number like 50
+
+# CONFIGURATION NOTES:
+#
+# 1. LABEL-BASED CATEGORIZATION:
+#    - Categories use Gmail labels for reliable matching
+#    - Apply labels to emails in Gmail, then reference them in your configuration
+#    - Supports Gmail search syntax: "is:important", "is:starred", "is:unread"
+#    - Supports pattern matching: "project-*" matches "project-alpha", "project-beta", etc.
+#
+# 2. SETTING UP LABELS:
+#    - In Gmail: Settings > Labels > Create new label (e.g., "meeting-invitation")
+#    - Apply labels manually or use Gmail filters to auto-label emails
+#    - Reference these labels in your configuration
+#
+# 3. PATTERN MATCHING:
+#    - Use "*" for wildcards: "gitlab-*" matches any label starting with "gitlab-"
+#    - Use "?" for single characters: "project-?" matches "project-a", "project-1"
+#    - Use "[abc]" for character sets: "priority-[123]" matches "priority-1", "priority-2", "priority-3"
+#
+# 4. CREDENTIAL STORAGE:
+#    - Store Gmail password securely: gmail-summary creds store --email your.email@gmail.com
+#    - Don't put passwords in this configuration file
 
 # Optional: Advanced Gmail Settings
 # gmail:

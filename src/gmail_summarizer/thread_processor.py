@@ -1,7 +1,7 @@
 """Thread processing and categorization logic."""
 
+import fnmatch
 import logging
-import re
 from typing import Any
 
 from .config import Config
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ThreadProcessor:
-    """Process and categorize Gmail threads based on configurable criteria."""
+    """Process and categorize Gmail threads based on Gmail labels with pattern matching support."""
 
     def __init__(self, config: Config):
         """Initialize thread processor.
@@ -93,184 +93,65 @@ class ThreadProcessor:
 
         Args:
             message: Message data
-            criteria: Matching criteria
+            criteria: Matching criteria (only labels are supported)
             category_name: Name of category being tested (for verbose logging)
 
         Returns:
-            True if message matches any criteria (OR logic between criteria types)
+            True if message has any of the required labels
         """
         subject = message.get("subject", "No Subject")
-        from_address = message.get("from", "")
-        to_address = message.get("to", "")
         message_labels = message.get("label_ids", [])
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                f"Message details: Subject='{subject}', From='{from_address}', To='{to_address}', Labels={message_labels}"
+                f"Message details: Subject='{subject}', Labels={message_labels}"
             )
             logger.debug(
                 f"Testing message '{subject[:50]}...' against category '{category_name}'"
             )
 
-        # Track if any criteria type matches (OR logic)
-        any_match = False
-        criteria_tested = False
-
-        # Check Gmail labels
+        # Check Gmail labels (only supported criteria type)
         if criteria.get("labels"):
-            criteria_tested = True
             required_labels = criteria["labels"]
             # Normalize Gmail search syntax (is:important → IMPORTANT)
             normalized_labels = [
                 self._normalize_gmail_label(label) for label in required_labels
             ]
-            match_result = any(label in message_labels for label in normalized_labels)
+
+            # Check for label matches using fnmatch (handles both exact matches and patterns)
+            match_result = False
+            matched_labels = []
+
+            for required_label in normalized_labels:
+                for message_label in message_labels:
+                    # Use fnmatch for all comparisons (handles exact matches when no wildcards)
+                    if fnmatch.fnmatch(message_label, required_label):
+                        match_result = True
+                        matched_labels.append(message_label)
+
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(
-                    f"  Labels check: {match_result} (required: {required_labels} → normalized: {normalized_labels}, message has: {message_labels})"
+                    f"  Labels check: {match_result} (required: {required_labels} → normalized: {normalized_labels}, message has: {message_labels}, matched: {matched_labels})"
                 )
-            if match_result:
-                any_match = True
 
-        # Check sender patterns (From header)
-        if criteria.get("from_patterns"):
-            criteria_tested = True
-            match_result = self._matches_patterns(
-                from_address, criteria["from_patterns"]
-            )
             if logger.isEnabledFor(logging.DEBUG):
-                matched_pattern = self._get_matching_pattern(
-                    from_address, criteria["from_patterns"]
-                )
-                logger.debug(
-                    f"  From pattern check: {match_result} ('{from_address}' vs {criteria['from_patterns']}) - matched: {matched_pattern}"
-                )
-            if match_result:
-                any_match = True
-
-        # Check recipient patterns (To header)
-        if criteria.get("to_patterns"):
-            criteria_tested = True
-            to_address = message.get("to", "")
-            match_result = self._matches_patterns(to_address, criteria["to_patterns"])
-            if logger.isEnabledFor(logging.DEBUG):
-                matched_pattern = self._get_matching_pattern(
-                    to_address, criteria["to_patterns"]
-                )
-                logger.debug(
-                    f"  To pattern check: {match_result} ('{to_address}' vs {criteria['to_patterns']}) - matched: {matched_pattern}"
-                )
-            if match_result:
-                any_match = True
-
-        # Check subject patterns
-        if criteria.get("subject_patterns"):
-            criteria_tested = True
-            match_result = self._matches_patterns(subject, criteria["subject_patterns"])
-            if logger.isEnabledFor(logging.DEBUG):
-                matched_pattern = self._get_matching_pattern(
-                    subject, criteria["subject_patterns"]
-                )
-                logger.debug(
-                    f"  Subject pattern check: {match_result} ('{subject}' vs {criteria['subject_patterns']}) - matched: {matched_pattern}"
-                )
-            if match_result:
-                any_match = True
-
-        # Check message content patterns
-        if criteria.get("content_patterns"):
-            criteria_tested = True
-            body = message.get("body", "")
-            match_result = self._matches_patterns(body, criteria["content_patterns"])
-            if logger.isEnabledFor(logging.DEBUG):
-                matched_pattern = self._get_matching_pattern(
-                    body, criteria["content_patterns"]
-                )
-                body_preview = (
-                    body[:100].replace("\n", " ") + "..." if len(body) > 100 else body
-                )
-                logger.debug(
-                    f"  Content pattern check: {match_result} ('{body_preview}' vs {criteria['content_patterns']}) - matched: {matched_pattern}"
-                )
-            if match_result:
-                any_match = True
-
-        # Check custom headers
-        if criteria.get("headers"):
-            criteria_tested = True
-            headers = message.get("headers", {})
-            for header_name, header_pattern in criteria["headers"].items():
-                header_value = headers.get(header_name, "")
-                match_result = self._matches_pattern(header_value, header_pattern)
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(
-                        f"  Header '{header_name}' check: {match_result} ('{header_value}' vs '{header_pattern}')"
-                    )
                 if match_result:
-                    any_match = True
-                    break  # Short circuit on first header match
+                    logger.debug(
+                        f"  ✓ Message '{subject[:50]}...' MATCHES category '{category_name}' (label match)"
+                    )
+                else:
+                    logger.debug(
+                        f"  ✗ Message '{subject[:50]}...' does NOT match category '{category_name}' (no label match)"
+                    )
 
-        # If no criteria were specified or tested, return False (shouldn't match catch-all here)
-        if not criteria_tested:
-            return False
+            return match_result
 
+        # Empty criteria or no labels specified - this is a catch-all
         if logger.isEnabledFor(logging.DEBUG):
-            if any_match:
-                logger.debug(
-                    f"  ✓ Message '{subject[:50]}...' MATCHES category '{category_name}' (OR logic)"
-                )
-            else:
-                logger.debug(
-                    f"  ✗ Message '{subject[:50]}...' does NOT match category '{category_name}' (no criteria matched)"
-                )
-
-        return any_match
-
-    def _matches_patterns(self, text: str, patterns: list[str]) -> bool:
-        """Check if text matches any of the given regex patterns.
-
-        Args:
-            text: Text to check
-            patterns: List of regex patterns
-
-        Returns:
-            True if text matches any pattern
-        """
-        for pattern in patterns:
-            if self._matches_pattern(text, pattern):
-                return True
-        return False
-
-    def _get_matching_pattern(self, text: str, patterns: list[str]) -> str | None:
-        """Get the first pattern that matches the given text.
-
-        Args:
-            text: Text to check
-            patterns: List of regex patterns
-
-        Returns:
-            The first matching pattern, or None if no match
-        """
-        for pattern in patterns:
-            if self._matches_pattern(text, pattern):
-                return pattern
-        return None
-
-    def _matches_pattern(self, text: str, pattern: str) -> bool:
-        """Check if text matches a single regex pattern.
-
-        Args:
-            text: Text to check
-            pattern: Regex pattern
-
-        Returns:
-            True if text matches pattern
-        """
-        try:
-            return bool(re.search(pattern, text, re.IGNORECASE))
-        except re.error as e:
-            logger.warning(f"Invalid regex pattern '{pattern}': {e}")
-            return False
+            logger.debug(
+                f"  ✓ Message '{subject[:50]}...' MATCHES category '{category_name}' (catch-all)"
+            )
+        return True
 
     def _normalize_gmail_label(self, label: str) -> str:
         """Normalize Gmail search syntax labels to internal format.
@@ -316,8 +197,20 @@ class ThreadProcessor:
         Returns:
             True if sender is marked as important
         """
+        import re
+
         from_address = message.get("from", "")
-        return self._matches_patterns(from_address, self.important_senders)
+
+        # Check if sender matches any of the important sender patterns
+        for pattern in self.important_senders:
+            try:
+                if re.search(pattern, from_address, re.IGNORECASE):
+                    return True
+            except re.error as e:
+                logger.warning(f"Invalid regex pattern '{pattern}': {e}")
+                continue
+
+        return False
 
     def process_threads(
         self, threads_data: list[tuple[dict[str, Any], list[dict[str, Any]]]]
@@ -497,31 +390,17 @@ class ThreadProcessor:
         return summary
 
     def _is_empty_criteria(self, criteria: dict[str, Any]) -> bool:
-        """Check if criteria contains only empty lists and dicts (catch-all).
+        """Check if criteria contains only empty labels (catch-all).
 
         Args:
             criteria: Category criteria dictionary
 
         Returns:
-            True if all criteria fields are empty
+            True if labels field is empty
         """
-        # Check if all pattern lists are empty
-        pattern_fields = [
-            "from_patterns",
-            "to_patterns",
-            "subject_patterns",
-            "content_patterns",
-            "labels",
-        ]
-        for field in pattern_fields:
-            if criteria.get(field) and len(criteria[field]) > 0:
-                return False
-
-        # Check if headers dict is empty
-        if criteria.get("headers") and len(criteria["headers"]) > 0:
-            return False
-
-        return True
+        # Check if labels list is empty
+        labels = criteria.get("labels", [])
+        return not labels or len(labels) == 0
 
     def _generate_gmail_url(
         self,

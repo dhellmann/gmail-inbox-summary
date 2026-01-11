@@ -68,48 +68,9 @@ class ClaudeConfig(BaseModel):
 class CategoryCriteria(BaseModel):
     """Thread categorization criteria."""
 
-    from_patterns: list[str] = Field(
-        default_factory=list, description="Sender email patterns"
-    )
-    to_patterns: list[str] = Field(
-        default_factory=list, description="Recipient patterns"
-    )
-    subject_patterns: list[str] = Field(
-        default_factory=list, description="Subject line patterns"
-    )
-    content_patterns: list[str] = Field(
-        default_factory=list, description="Message content patterns"
-    )
-    headers: dict[str, str] = Field(
-        default_factory=dict, description="Custom header patterns"
-    )
     labels: list[str] = Field(default_factory=list, description="Gmail labels")
 
-    @field_validator(
-        "from_patterns", "to_patterns", "subject_patterns", "content_patterns"
-    )
-    @classmethod
-    def validate_regex_patterns(cls, v: list[str]) -> list[str]:
-        """Validate regex patterns."""
-        for pattern in v:
-            try:
-                re.compile(pattern)
-            except re.error as e:
-                raise ValueError(f"Invalid regex pattern '{pattern}': {e}") from e
-        return v
-
-    @field_validator("headers")
-    @classmethod
-    def validate_header_patterns(cls, v: dict[str, str]) -> dict[str, str]:
-        """Validate header regex patterns."""
-        for header, pattern in v.items():
-            try:
-                re.compile(pattern)
-            except re.error as e:
-                raise ValueError(
-                    f"Invalid regex pattern for header '{header}': {e}"
-                ) from e
-        return v
+    model_config = {"extra": "forbid"}  # Reject unknown fields
 
 
 class Category(BaseModel):

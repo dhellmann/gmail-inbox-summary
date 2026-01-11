@@ -9,7 +9,7 @@ A Python application that generates AI-powered summaries of Gmail inbox threads 
 - **🤖 AI-Powered Summaries**: Uses Claude Code CLI to generate intelligent, context-aware summaries
 - **⚡ Parallel Processing**: Configurable concurrent summarization for 5x faster processing
 - **📧 Gmail Integration**: Secure IMAP access with keychain credential storage for inbox access
-- **⚙️ Configurable Categories**: Define custom thread categories with flexible regex-based matching
+- **⚙️ Configurable Categories**: Define custom thread categories using Gmail labels with pattern matching support
 - **📊 Rich HTML Reports**: Beautiful, responsive HTML output with statistics and collapsible sections
 - **💻 Modern CLI**: Rich command-line interface with progress indicators and colored output
 - **🔧 Flexible Configuration**: YAML configuration files with comprehensive validation
@@ -89,25 +89,32 @@ claude:
   concurrency: 5  # Number of concurrent summarization tasks (1-20)
 
 # Thread Categories (customize as needed)
+# Categories are now organized by Gmail labels only for simpler and more reliable categorization
 categories:
-  - name: "Development"
+  - name: "Important Messages"
+    summary_prompt: "Summarize this important email, highlighting urgency and required actions."
+    criteria:
+      labels:
+        - "is:important"  # Gmail's important label
+        - "is:starred"    # Starred emails
+
+  - name: "Meeting Invitations"
+    summary_prompt: "Summarize this meeting invitation, including meeting purpose, time, and participants."
+    criteria:
+      labels:
+        - "meeting-invitation"  # Custom label for meeting invitations
+
+  - name: "Code"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
     criteria:
-      from_patterns:
-        - "notifications@github\\.com"
-        - "noreply@gitlab\\.com"
-        - "alerts@datadog\\.com"
-        - ".*@atlassian\\.net"  # Jira
-      subject_patterns:
-        - "\\[.*\\].*Pull Request"
-        - "\\[.*\\].*Merge Request"  # GitLab
-        - "\\[.*\\].*Issue"
-        - "\\[JIRA\\]"
-        - "Deploy:"
+      labels:
+        - "github"      # GitHub notifications
+        - "gitlab"      # GitLab notifications
+        - "gitlab-*"    # GitLab project-specific labels (pattern matching)
 
-  - name: "Personal"
-    summary_prompt: "Provide a brief, friendly summary of this personal email."
-    criteria: {}  # Catch-all for remaining emails
+  - name: "General Email"
+    summary_prompt: "Provide a brief, friendly summary of this email."
+    criteria: {}  # Empty criteria = catch all remaining emails
 
 # Important Senders (highlighted in reports)
 important_senders:
@@ -187,7 +194,7 @@ gmail:
 
 **Convenience Feature**: The `creds check` command can work without a configuration file for Gmail accounts, using default IMAP settings (imap.gmail.com:993). For custom IMAP servers, provide a configuration file with the `--config` option.
 
-**Configuration Validation**: All configuration files are automatically validated using Pydantic models. Invalid configurations will show clear error messages with specific validation failures, including invalid regex patterns, out-of-range values, and unknown fields.
+**Configuration Validation**: All configuration files are automatically validated using Pydantic models. Invalid configurations will show clear error messages with specific validation failures, including invalid email formats, out-of-range values, and unknown fields.
 
 ### Claude Configuration
 
@@ -223,48 +230,34 @@ categories:
   - name: "Category Name"           # Display name
     summary_prompt: "Custom prompt for this category"
     criteria:
-      # Match sender email patterns
-      from_patterns:
-        - ".*@domain\\.com"
-        - "noreply@service\\.net"
-
-      # Match recipient patterns
-      to_patterns:
-        - "team@company\\.com"
-
-      # Match subject line patterns
-      subject_patterns:
-        - "\\[ALERT\\]"
-        - "Daily Report:"
-
-      # Match message content
-      content_patterns:
-        - "invoice.*attached"
-
-      # Match custom headers
-      headers:
-        "List-Id": ".*@lists\\.domain\\.com"
-
-      # Match Gmail labels
+      # Match Gmail labels (only supported criteria type)
       labels:
         - "is:important"     # Gmail search syntax (recommended)
         - "is:starred"       # Gmail search syntax (recommended)
         - "IMPORTANT"        # Internal label format (also supported)
-        - "CATEGORY_PROMOTIONS"
+        - "custom-label"     # Your custom labels
+        - "project-*"        # Pattern matching with wildcards
 ```
 
-**Pattern Matching:**
+**Label-Only Categorization:**
 
-- Use regex patterns with proper escaping: `\\.` for literal dots
-- Patterns are case-insensitive by default
-- Empty criteria `{}` or criteria with all empty lists creates a catch-all category that matches all emails
+- **Simplified Configuration**: Categories now only use Gmail labels for more reliable matching
+- **Pattern Support**: Use wildcard patterns like `project-*` to match multiple related labels (e.g., `project-alpha`, `project-beta`)
+- **Gmail Search Syntax**: Use familiar Gmail syntax like `is:important`, `is:starred`, `is:unread`
+- **Custom Labels**: Apply custom labels to emails in Gmail and reference them in your configuration
+- Empty criteria `{}` creates a catch-all category that matches all remaining emails
 
-**Gmail Label Syntax:**
+**Gmail Label Syntax and Pattern Matching:**
 
-- **Recommended**: Use Gmail's familiar search syntax like `is:important`, `is:starred`, `is:unread`
-- **Also supported**: Internal label format like `IMPORTANT`, `STARRED`, `UNREAD`
-- The tool automatically converts Gmail search syntax to the internal format
-- Supported Gmail search labels:
+- **Gmail Search Syntax**: Use familiar Gmail syntax like `is:important`, `is:starred`, `is:unread`
+- **Custom Labels**: Reference any custom labels you've applied in Gmail (e.g., `project-alpha`, `work-urgent`)
+- **Pattern Matching**: Use wildcard patterns to match multiple related labels:
+  - `gitlab-*` matches `gitlab-project1`, `gitlab-project2`, etc.
+  - `meeting-*` matches `meeting-urgent`, `meeting-weekly`, etc.
+  - Standard Unix filename patterns are supported (`*`, `?`, `[abc]`)
+- **Internal Label Format**: Also supports Gmail's internal format like `IMPORTANT`, `STARRED`, `UNREAD`
+- **Automatic Conversion**: The tool automatically converts Gmail search syntax to internal format
+- **Supported Gmail Search Labels**:
   - `is:important` → `IMPORTANT`
   - `is:starred` → `STARRED`
   - `is:unread` → `UNREAD`
@@ -496,8 +489,8 @@ Error: Invalid YAML syntax
 ```
 
 - Validate YAML syntax with online tools
-- Check regex pattern escaping: use `\\.` for literal dots
 - Ensure proper indentation (spaces, not tabs)
+- Check label names and pattern syntax
 
 **Configuration Validation Errors:**
 
@@ -509,7 +502,6 @@ Error: Invalid configuration: 1 validation error
 
 Common validation issues:
 - Invalid email format (missing @ symbol)
-- Invalid regex patterns in criteria (use proper escaping)
 - Port numbers outside valid range (1-65535)
 - Timeout values outside valid range (1-600 seconds)
 - Empty category names or prompts
@@ -522,8 +514,9 @@ Common validation issues:
 Warning: No threads matched any category
 ```
 
-- Check Gmail label filters
-- Verify regex patterns with test data
+- Check Gmail label filters in your configuration
+- Verify that emails have the labels you're looking for
+- Use wildcard patterns like `project-*` to match multiple labels
 - Add a catch-all category with empty criteria: `criteria: {}`
 
 ### Debug Mode

@@ -29,8 +29,8 @@ categories:
   - name: "Work"
     summary_prompt: "Summarize this work-related email thread."
     criteria:
-      from_patterns:
-        - ".*@company\\\\.com"
+      labels:
+        - "work"
 
   - name: "Personal"
     summary_prompt: "Summarize this personal email thread."
