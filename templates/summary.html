@@ -32,50 +32,21 @@
         .header {
             background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
             color: white;
-            padding: 20px;
+            padding: 12px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 2.2em;
+            font-size: 1.5em;
             font-weight: 300;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .header .meta {
-            font-size: 1.1em;
+            font-size: 0.9em;
             opacity: 0.9;
         }
 
-        .stats {
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            padding: 15px 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-card {
-            text-align: center;
-            padding: 12px;
-            background: white;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 2em;
-            font-weight: 600;
-            color: #1d4ed8;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
 
         .content {
             padding: 20px;
@@ -104,7 +75,7 @@
         }
 
         .category-title {
-            font-size: 1.3em;
+            font-size: 1.1em;
             font-weight: 600;
             color: #495057;
         }
@@ -157,11 +128,73 @@
         }
 
         .thread-subject {
-            font-size: 1.1em;
+            font-size: 1.0em;
             font-weight: 600;
             color: #2c3e50;
             flex: 1;
             min-width: 250px;
+        }
+
+        .subject-link {
+            color: #2c3e50;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .subject-link:hover {
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
+        .participant-count {
+            cursor: help;
+            border-bottom: 1px dotted #6c757d;
+            position: relative;
+        }
+
+        .participant-count::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 1000;
+            max-width: 300px;
+            white-space: normal;
+            word-wrap: break-word;
+            margin-top: 5px;
+        }
+
+        .participant-count:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .participant-count::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(2px);
+            border: 5px solid transparent;
+            border-top-color: #333;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+        }
+
+        .participant-count:hover::before {
+            opacity: 1;
+            visibility: visible;
         }
 
         .thread-meta {
@@ -208,24 +241,6 @@
             line-height: 1.4;
         }
 
-        .thread-participants {
-            margin-top: 8px;
-            font-size: 0.9em;
-            color: #6c757d;
-        }
-
-        .participants-list {
-            display: inline;
-            margin-left: 5px;
-        }
-
-        .participant {
-            background: #e9ecef;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin-right: 5px;
-            font-size: 0.85em;
-        }
 
         .error-message {
             color: #dc3545;
@@ -262,16 +277,11 @@
             }
 
             .header {
-                padding: 15px;
+                padding: 10px;
             }
 
             .header h1 {
-                font-size: 1.8em;
-            }
-
-            .stats {
-                padding: 12px;
-                grid-template-columns: 1fr 1fr;
+                font-size: 1.3em;
             }
 
             .content {
@@ -309,28 +319,10 @@
         <header class="header">
             <h1>Gmail Inbox Summary</h1>
             <div class="meta">
-                Generated on {{ generated_date }} | {{ total_threads }} threads processed
+                Generated on {{ generated_date }}
             </div>
         </header>
 
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_threads }}</div>
-                <div class="stat-label">Total Threads</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ successful_summaries }}</div>
-                <div class="stat-label">Summaries Generated</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ failed_summaries }}</div>
-                <div class="stat-label">Failed Summaries</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ (success_rate * 100) | round(1) }}%</div>
-                <div class="stat-label">Success Rate</div>
-            </div>
-        </div>
 
         <main class="content">
             {% for category_name, threads in categorized_threads.items() %}
@@ -347,15 +339,17 @@
                     {% for thread in threads %}
                     <div class="thread{% if thread.has_important_sender %} important{% endif %}">
                         <div class="thread-header">
-                            <h3 class="thread-subject">{{ thread.subject | e }}</h3>
+                            <h3 class="thread-subject">
+                                <a href="{{ thread.gmail_url }}" target="_blank" class="subject-link" title="View in Gmail">{{ thread.subject | e }}</a>
+                            </h3>
                             <div class="thread-meta">
                                 {% if thread.has_important_sender %}
                                 <span class="important-badge">Important Sender</span>
                                 {% endif %}
                                 <span>{{ thread.message_count }} message{{ 's' if thread.message_count != 1 else '' }}</span>
-                                <a href="{{ thread.gmail_url }}" target="_blank" class="gmail-link" title="View in Gmail">
-                                    📧 View in Gmail
-                                </a>
+                                {% if thread.participants %}
+                                <span class="participant-count" data-tooltip="{{ thread.participants | join(', ') | e }}">{{ thread.participants | length }} participant{{ 's' if thread.participants | length != 1 else '' }}</span>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -369,19 +363,6 @@
                         </div>
                         {% endif %}
 
-                        {% if thread.participants %}
-                        <div class="thread-participants">
-                            <strong>Participants:</strong>
-                            <span class="participants-list">
-                                {% for participant in thread.participants[:5] %}
-                                <span class="participant">{{ participant | e }}</span>
-                                {% endfor %}
-                                {% if thread.participants | length > 5 %}
-                                <span class="participant">+{{ thread.participants | length - 5 }} more</span>
-                                {% endif %}
-                            </span>
-                        </div>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
