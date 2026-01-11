@@ -204,7 +204,9 @@ class ThreadProcessor:
                     "subject": self._extract_thread_subject(messages),
                     "participants": self._extract_participants(messages),
                     "message_count": len(messages),
-                    "gmail_url": self._generate_gmail_url(thread),
+                    "gmail_url": self._generate_gmail_url(
+                        thread, self._extract_thread_subject(messages)
+                    ),
                 }
 
                 categorized_threads[category["name"]].append(thread_data)
@@ -319,21 +321,30 @@ class ThreadProcessor:
 
         return True
 
-    def _generate_gmail_url(self, thread: dict[str, Any]) -> str:
+    def _generate_gmail_url(self, thread: dict[str, Any], subject: str = "") -> str:
         """Generate Gmail web interface URL for a thread.
 
         Args:
             thread: Thread object containing id
+            subject: Thread subject for search-based URLs
 
         Returns:
             Gmail web URL for viewing the thread
         """
         thread_id = thread.get("id", "")
-        # Handle IMAP-style thread IDs (thread_12345) by extracting the numeric part
+
+        # Handle IMAP-style thread IDs by using search instead of direct links
         if thread_id.startswith("thread_"):
-            # For IMAP threads, we may not have the actual Gmail thread ID
-            # Use the message ID as an approximation
-            return f"https://mail.google.com/mail/u/0/#search/{thread_id.replace('thread_', '')}"
+            # For IMAP threads, search by subject since we don't have real Gmail thread IDs
+            if subject and subject != "No Subject":
+                # URL encode the subject and create a search URL
+                import urllib.parse
+
+                encoded_subject = urllib.parse.quote(subject)
+                return f"https://mail.google.com/mail/u/0/#search/subject:{encoded_subject}"
+            else:
+                # Fallback to generic inbox if no subject
+                return "https://mail.google.com/mail/u/0/#inbox"
         else:
-            # For actual Gmail API thread IDs
+            # For actual Gmail API thread IDs (if using Gmail API in the future)
             return f"https://mail.google.com/mail/u/0/#inbox/{thread_id}"

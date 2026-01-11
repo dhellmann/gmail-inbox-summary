@@ -239,10 +239,17 @@ def test_gmail_url_generation() -> None:
     config.get_important_senders.return_value = []
     processor = ThreadProcessor(config)
 
-    # Test IMAP-style thread ID
+    # Test IMAP-style thread ID without subject (fallback to inbox)
     imap_thread = {"id": "thread_12345"}
     imap_url = processor._generate_gmail_url(imap_thread)
-    assert imap_url == "https://mail.google.com/mail/u/0/#search/12345"
+    assert imap_url == "https://mail.google.com/mail/u/0/#inbox"
+
+    # Test IMAP-style thread ID with subject
+    imap_url_with_subject = processor._generate_gmail_url(imap_thread, "Test Subject")
+    assert (
+        imap_url_with_subject
+        == "https://mail.google.com/mail/u/0/#search/subject:Test%20Subject"
+    )
 
     # Test Gmail API thread ID
     api_thread = {"id": "1234567890abcdef"}
@@ -296,7 +303,7 @@ def test_process_threads_includes_gmail_url() -> None:
     assert "gmail_url" in processed_thread
     assert (
         processed_thread["gmail_url"]
-        == "https://mail.google.com/mail/u/0/#search/12345"
+        == "https://mail.google.com/mail/u/0/#search/subject:Test%20Subject"
     )
 
 
