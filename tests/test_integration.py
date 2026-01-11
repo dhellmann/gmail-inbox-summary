@@ -482,7 +482,7 @@ def test_config_generate_command() -> None:
         content = config_file.read_text(encoding="utf-8")
         assert 'email_address: "user@example.com"' in content
         assert "categories:" in content
-        assert "Work Email" in content
+        # Work Email category was removed, check for Development category instead
         assert "Development" in content
 
         # Test that generated config is valid

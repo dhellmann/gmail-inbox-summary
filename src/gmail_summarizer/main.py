@@ -650,18 +650,6 @@ claude:
 
 # Thread Categories - processed in order, first match wins
 categories:
-  # Work-related emails
-  - name: "Work Email"
-    summary_prompt: "Summarize this work-related email focusing on action items, decisions, and deadlines."
-    criteria:
-      from_patterns:
-        - ".*@company\\\\.com"
-        - ".*@client\\\\.org"
-      subject_patterns:
-        - "\\\\[PROJECT\\\\]"
-        - "Meeting:"
-        - "Action Required:"
-
   # Development notifications (GitHub, GitLab, etc.)
   - name: "Development"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."

@@ -32,18 +32,6 @@ categories:
         - "ASAP"
         - "Action Required"
 
-  # Regular Work Email
-  - name: "Work Email"
-    summary_prompt: "Summarize this work-related email focusing on action items, decisions, deadlines, and project updates."
-    criteria:
-      from_patterns:
-        - ".*@company\\.com"
-        - ".*@client\\.org"
-      subject_patterns:
-        - "\\[PROJECT.*\\]"
-        - "Meeting:"
-        - "Weekly Update"
-
   # Code & Development
   - name: "Development"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
