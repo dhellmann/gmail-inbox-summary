@@ -101,8 +101,13 @@ class ThreadProcessor:
         """
         subject = message.get("subject", "No Subject")
         from_address = message.get("from", "")
+        to_address = message.get("to", "")
+        message_labels = message.get("label_ids", [])
 
         if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                f"Message details: Subject='{subject}', From='{from_address}', To='{to_address}', Labels={message_labels}"
+            )
             logger.debug(
                 f"Testing message '{subject[:50]}...' against category '{category_name}'"
             )
@@ -115,7 +120,6 @@ class ThreadProcessor:
         if criteria.get("labels"):
             criteria_tested = True
             required_labels = criteria["labels"]
-            message_labels = message.get("label_ids", [])
             match_result = any(label in message_labels for label in required_labels)
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(

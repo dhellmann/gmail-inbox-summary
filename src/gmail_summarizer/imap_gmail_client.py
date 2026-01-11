@@ -528,7 +528,11 @@ class ImapGmailClient:
         labels = []
 
         # Handle quoted labels and escape sequences
-        label_parts = re.findall(r'"([^"]*)"|\S+', labels_str)
+        # For quoted strings, capture what's inside the quotes
+        # For unquoted strings, capture the whole string
+        label_parts = re.findall(r'"([^"]*)"|(\S+)', labels_str)
+        # Flatten the tuple results and filter out empty strings
+        label_parts = [match for group in label_parts for match in group if match]
 
         for label in label_parts:
             # Remove quotes and handle escapes
@@ -537,7 +541,7 @@ class ImapGmailClient:
 
             # Convert Gmail IMAP label format to API format
             if label.startswith("\\"):
-                # System labels
+                # System labels - handle both single and double backslash formats
                 system_label_map = {
                     "\\Inbox": "INBOX",
                     "\\Sent": "SENT",
@@ -546,8 +550,16 @@ class ImapGmailClient:
                     "\\Trash": "TRASH",
                     "\\Important": "IMPORTANT",
                     "\\Starred": "STARRED",
+                    # Double backslash variants (in case they occur)
+                    "\\\\Inbox": "INBOX",
+                    "\\\\Sent": "SENT",
+                    "\\\\Drafts": "DRAFT",
+                    "\\\\Spam": "SPAM",
+                    "\\\\Trash": "TRASH",
+                    "\\\\Important": "IMPORTANT",
+                    "\\\\Starred": "STARRED",
                 }
-                label = system_label_map.get(label, label[1:])
+                label = system_label_map.get(label, label.lstrip("\\"))
 
             labels.append(label)
 
