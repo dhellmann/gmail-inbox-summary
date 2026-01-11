@@ -116,8 +116,8 @@ def test_cli_dry_run(
     # Setup mocks
     mock_gmail = Mock()
     mock_gmail.get_inbox_threads.return_value = [t[0] for t in sample_threads_data]
-    mock_gmail.get_thread_messages.side_effect = lambda tid: [
-        t[1] for t in sample_threads_data if t[0]["id"] == tid
+    mock_gmail.get_thread_messages.side_effect = lambda thread: [
+        t[1] for t in sample_threads_data if t[0]["id"] == thread["id"]
     ][0]
     mock_gmail_client.return_value = mock_gmail
 
@@ -169,8 +169,10 @@ def test_full_workflow_integration(
     # Setup Gmail client mock
     mock_gmail = Mock()
     mock_gmail.get_inbox_threads.return_value = [t[0] for t in sample_threads_data]
-    mock_gmail.get_thread_messages.side_effect = lambda tid: [
-        msgs for thread, msgs in sample_threads_data if thread["id"] == tid
+    mock_gmail.get_thread_messages.side_effect = lambda thread: [
+        msgs
+        for thread_data, msgs in sample_threads_data
+        if thread_data["id"] == thread["id"]
     ][0]
     mock_gmail_client.return_value = mock_gmail
 
@@ -178,30 +180,30 @@ def test_full_workflow_integration(
     mock_summarizer = Mock()
     mock_summarizer.test_cli_connection.return_value = True
 
-    def mock_summarize_batch(categorized_threads: dict) -> dict:
-        result: dict[str, list] = {}
-        for category, threads in categorized_threads.items():
-            result[category] = []
-            for thread in threads:
-                thread_copy = thread.copy()
-                thread_copy.update(
-                    {
-                        "summary": f"AI summary for {thread['subject']}",
-                        "summary_generated": True,
-                        "summary_error": None,
-                    }
-                )
-                result[category].append(thread_copy)
-        return result
+    def mock_summarize_thread(thread_data: dict, category_config: dict) -> dict:
+        thread_copy = thread_data.copy()
+        thread_copy.update(
+            {
+                "summary": f"AI summary for {thread_data['subject']}",
+                "summary_generated": True,
+                "summary_error": None,
+            }
+        )
+        return thread_copy
 
-    mock_summarizer.summarize_threads_batch.side_effect = mock_summarize_batch
-    mock_summarizer.get_summarization_stats.return_value = {
-        "total_threads": 2,
-        "successful_summaries": 2,
-        "failed_summaries": 0,
-        "success_rate": 1.0,
-        "error_types": {},
-    }
+    mock_summarizer.summarize_thread.side_effect = mock_summarize_thread
+
+    def mock_get_stats(summarized_threads: dict) -> dict:
+        total = sum(len(threads) for threads in summarized_threads.values())
+        return {
+            "total_threads": total,
+            "successful_summaries": total,
+            "failed_summaries": 0,
+            "success_rate": 1.0,
+            "error_types": {},
+        }
+
+    mock_summarizer.get_summarization_stats.side_effect = mock_get_stats
     mock_llm_summarizer.return_value = mock_summarizer
 
     # Setup HTML generator mock
@@ -222,7 +224,10 @@ def test_full_workflow_integration(
         # Verify all components were called
         mock_gmail.get_inbox_threads.assert_called_once()
         mock_summarizer.test_cli_connection.assert_called_once()
-        mock_summarizer.summarize_threads_batch.assert_called_once()
+        assert (
+            mock_summarizer.summarize_thread.call_count == 2
+        )  # Should be called for each thread
+        mock_summarizer.get_summarization_stats.assert_called_once()
         mock_generator.generate_html_report.assert_called_once()
 
 

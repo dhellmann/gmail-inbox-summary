@@ -90,8 +90,8 @@ def test_call_claude_cli_success(mock_subprocess: Mock) -> None:
     # Check that the call included the expected arguments
     args, kwargs = mock_subprocess.call_args
     assert args[0][0] == "claude"
-    assert args[0][1] == "code"
-    assert "--file" in args[0]
+    assert args[0][1] == "--print"
+    assert "input" in kwargs  # Content is passed via stdin
 
 
 @patch("subprocess.run")

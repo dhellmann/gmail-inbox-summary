@@ -217,8 +217,9 @@ class ImapGmailClient:
             return None
 
         try:
-            # Fetch message with headers, labels, and thread ID
-            fetch_items = "(RFC822.HEADER RFC822.TEXT INTERNALDATE"
+            # Fetch message with headers, labels, and thread ID using PEEK to avoid marking as read
+            # BODY.PEEK[HEADER] and BODY.PEEK[TEXT] don't change message flags (unlike RFC822.HEADER/TEXT)
+            fetch_items = "(BODY.PEEK[HEADER] BODY.PEEK[TEXT] INTERNALDATE"
             if self.gmail_extensions:
                 fetch_items += " X-GM-LABELS X-GM-THRID X-GM-MSGID)"
             else:
