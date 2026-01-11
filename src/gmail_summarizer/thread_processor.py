@@ -353,9 +353,10 @@ class ThreadProcessor:
             )
 
             if message_id:
-                # Remove angle brackets if present and URL encode
+                # Remove angle brackets if present
                 clean_message_id = message_id.strip("<>")
-                encoded_message_id = urllib.parse.quote(clean_message_id)
+                # Always URL encode the Message-ID, including forward slashes
+                encoded_message_id = urllib.parse.quote(clean_message_id, safe="")
                 return f"https://mail.google.com/mail/u/0/#search/rfc822msgid%3A{encoded_message_id}"
 
         # Fallback to subject search if Message-ID not available
