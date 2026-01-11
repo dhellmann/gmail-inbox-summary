@@ -239,40 +239,51 @@ def test_gmail_url_generation() -> None:
     config.get_important_senders.return_value = []
     processor = ThreadProcessor(config)
 
-    # Test IMAP-style thread ID without subject (fallback to inbox)
-    imap_thread = {"id": "thread_12345"}
-    imap_url = processor._generate_gmail_url(imap_thread)
-    assert imap_url == "https://mail.google.com/mail/u/0/#inbox"
+    # Test thread ID without subject (fallback to inbox)
+    thread = {"id": "thread_12345"}
+    url_no_subject = processor._generate_gmail_url(thread)
+    assert url_no_subject == "https://mail.google.com/mail/u/0/#inbox"
 
-    # Test IMAP-style thread ID with subject
-    imap_url_with_subject = processor._generate_gmail_url(imap_thread, "Test Subject")
+    # Test with Message-ID (preferred method)
+    messages_with_msgid = [
+        {"headers": {"Message-Id": "<test123@example.com>"}, "subject": "Test Subject"}
+    ]
+    url_with_msgid = processor._generate_gmail_url(
+        thread, "Test Subject", messages_with_msgid
+    )
     assert (
-        imap_url_with_subject
-        == "https://mail.google.com/mail/u/0/#search/subject:Test%20Subject"
+        url_with_msgid
+        == "https://mail.google.com/mail/u/0/#search/rfc822msgid%3Atest123%40example.com"
     )
 
-    # Test real Gmail thread ID (alphanumeric hash)
-    real_gmail_thread = {"id": "FMfcgzQfBPzBbMSrTZScLmNbBxglgBrM"}
-    real_url = processor._generate_gmail_url(real_gmail_thread)
+    # Test fallback to subject when no Message-ID
+    messages_no_msgid = [{"headers": {}, "subject": "Test Subject"}]
+    url_with_subject = processor._generate_gmail_url(
+        thread, "Test Subject", messages_no_msgid
+    )
     assert (
-        real_url
-        == "https://mail.google.com/mail/u/0/#inbox/FMfcgzQfBPzBbMSrTZScLmNbBxglgBrM"
+        url_with_subject
+        == "https://mail.google.com/mail/u/0/#search/subject%3A(Test%20Subject)"
     )
 
-    # Test short thread ID (falls back to search)
-    short_thread = {"id": "123"}
-    short_url = processor._generate_gmail_url(short_thread, "Test Subject")
-    assert short_url == "https://mail.google.com/mail/u/0/#inbox/123"
+    # Test subject with reply prefix (should be cleaned)
+    url_with_reply = processor._generate_gmail_url(
+        thread, "Re: Test Subject", messages_no_msgid
+    )
+    assert (
+        url_with_reply
+        == "https://mail.google.com/mail/u/0/#search/subject%3A(Test%20Subject)"
+    )
 
     # Test empty thread ID
     empty_thread = {"id": ""}
     empty_url = processor._generate_gmail_url(empty_thread)
-    assert empty_url == "https://mail.google.com/mail/u/0/#inbox/"
+    assert empty_url == "https://mail.google.com/mail/u/0/#inbox"
 
     # Test thread without ID
     no_id_thread: dict[str, str] = {}
     no_id_url = processor._generate_gmail_url(no_id_thread)
-    assert no_id_url == "https://mail.google.com/mail/u/0/#inbox/"
+    assert no_id_url == "https://mail.google.com/mail/u/0/#inbox"
 
 
 def test_process_threads_includes_gmail_url() -> None:
@@ -297,6 +308,7 @@ def test_process_threads_includes_gmail_url() -> None:
                     "label_ids": ["IMPORTANT"],
                     "from": "boss@company.com",
                     "subject": "Test Subject",
+                    "headers": {"Message-Id": "<important123@company.com>"},
                 }
             ],
         )
@@ -307,11 +319,11 @@ def test_process_threads_includes_gmail_url() -> None:
     # Get the processed thread
     processed_thread = result["Important"][0]
 
-    # Verify Gmail URL is included
+    # Verify Gmail URL is included and uses Message-ID
     assert "gmail_url" in processed_thread
     assert (
         processed_thread["gmail_url"]
-        == "https://mail.google.com/mail/u/0/#search/subject:Test%20Subject"
+        == "https://mail.google.com/mail/u/0/#search/rfc822msgid%3Aimportant123%40company.com"
     )
 
 

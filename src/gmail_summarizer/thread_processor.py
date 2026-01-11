@@ -205,7 +205,7 @@ class ThreadProcessor:
                     "participants": self._extract_participants(messages),
                     "message_count": len(messages),
                     "gmail_url": self._generate_gmail_url(
-                        thread, self._extract_thread_subject(messages)
+                        thread, self._extract_thread_subject(messages), messages
                     ),
                 }
 
@@ -321,33 +321,54 @@ class ThreadProcessor:
 
         return True
 
-    def _generate_gmail_url(self, thread: dict[str, Any], subject: str = "") -> str:
+    def _generate_gmail_url(
+        self,
+        thread: dict[str, Any],
+        subject: str = "",
+        messages: list[dict[str, Any]] | None = None,
+    ) -> str:
         """Generate Gmail web interface URL for a thread.
 
+        Since IMAP thread IDs don't map to Gmail web thread IDs, we use search-based URLs.
+        Prefers Message-ID search over subject search for accuracy.
+
         Args:
-            thread: Thread object containing id
-            subject: Thread subject for search-based URLs
+            thread: Thread object containing id and messages
+            subject: Thread subject for search-based URLs (fallback)
+            messages: List of messages in the thread
 
         Returns:
             Gmail web URL for viewing the thread
         """
-        thread_id = thread.get("id", "")
+        import urllib.parse
 
-        # Check if we have a real Gmail thread ID (alphanumeric hash)
-        if thread_id and not thread_id.startswith("thread_") and len(thread_id) > 10:
-            # Use real Gmail thread ID for direct link
-            return f"https://mail.google.com/mail/u/0/#inbox/{thread_id}"
-        elif thread_id.startswith("thread_"):
-            # For IMAP threads, search by subject since we don't have real Gmail thread IDs
-            if subject and subject != "No Subject":
-                # URL encode the subject and create a search URL
-                import urllib.parse
+        # Try to get Message-ID from first message for most accurate search
+        if messages:
+            first_message = messages[0]
+            headers = first_message.get("headers", {})
+            message_id = (
+                headers.get("Message-ID")
+                or headers.get("message-id")
+                or headers.get("Message-Id")
+            )
 
-                encoded_subject = urllib.parse.quote(subject)
-                return f"https://mail.google.com/mail/u/0/#search/subject:{encoded_subject}"
-            else:
-                # Fallback to generic inbox if no subject
-                return "https://mail.google.com/mail/u/0/#inbox"
+            if message_id:
+                # Remove angle brackets if present and URL encode
+                clean_message_id = message_id.strip("<>")
+                encoded_message_id = urllib.parse.quote(clean_message_id)
+                return f"https://mail.google.com/mail/u/0/#search/rfc822msgid%3A{encoded_message_id}"
+
+        # Fallback to subject search if Message-ID not available
+        if subject and subject != "No Subject":
+            # Clean up subject for search - remove common reply prefixes
+            clean_subject = subject
+            for prefix in ["Re:", "RE:", "Fwd:", "FWD:"]:
+                if clean_subject.startswith(prefix):
+                    clean_subject = clean_subject[len(prefix) :].strip()
+
+            # URL encode the cleaned subject
+            encoded_subject = urllib.parse.quote(clean_subject)
+            return f"https://mail.google.com/mail/u/0/#search/subject%3A({encoded_subject})"
         else:
-            # For any other thread ID format
-            return f"https://mail.google.com/mail/u/0/#inbox/{thread_id}"
+            # Final fallback to generic inbox if no identifiers
+            return "https://mail.google.com/mail/u/0/#inbox"
