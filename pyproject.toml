@@ -82,6 +82,7 @@ dependencies = [
     "black>=23.1.0",
     "mypy>=1.0.0",
     "ruff>=0.0.243",
+    "pre-commit>=3.0.0",
 ]
 
 [tool.hatch.envs.lint.scripts]
@@ -94,9 +95,9 @@ fix = [
     "ruff check --fix {args:.}",
     "ruff format {args:.}",
 ]
+# Run all pre-commit tasks to catch issues before committing
 all = [
-    "check",
-    "typing",
+    "pre-commit run --all-files",
 ]
 
 [tool.ruff]
