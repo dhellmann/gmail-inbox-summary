@@ -193,6 +193,27 @@ def test_full_workflow_integration(
 
     mock_summarizer.summarize_thread.side_effect = mock_summarize_thread
 
+    def mock_parallel_summarize(
+        categorized_threads: dict,
+        cache_manager: Any = None,
+        progress_callback: Any = None,
+    ) -> dict:
+        """Mock the parallel summarization method."""
+        result: dict[str, list[dict]] = {}
+        for category_name, threads in categorized_threads.items():
+            result[category_name] = []
+            for thread_data in threads:
+                summarized = mock_summarize_thread(thread_data, {})
+                result[category_name].append(summarized)
+                # Call progress callback if provided
+                if progress_callback:
+                    progress_callback(
+                        len(result[category_name]), f"Processing {category_name}"
+                    )
+        return result
+
+    mock_summarizer.summarize_threads_parallel.side_effect = mock_parallel_summarize
+
     def mock_get_stats(summarized_threads: dict) -> dict:
         total = sum(len(threads) for threads in summarized_threads.values())
         return {
@@ -224,9 +245,8 @@ def test_full_workflow_integration(
         # Verify all components were called
         mock_gmail.get_inbox_threads.assert_called_once()
         mock_summarizer.test_cli_connection.assert_called_once()
-        assert (
-            mock_summarizer.summarize_thread.call_count == 2
-        )  # Should be called for each thread
+        # With parallel processing, summarize_threads_parallel is called instead
+        mock_summarizer.summarize_threads_parallel.assert_called_once()
         mock_summarizer.get_summarization_stats.assert_called_once()
         mock_generator.generate_html_report.assert_called_once()
 
@@ -463,7 +483,7 @@ def test_config_generate_command() -> None:
         assert 'email_address: "user@example.com"' in content
         assert "categories:" in content
         assert "Work Email" in content
-        assert "GitHub Notifications" in content
+        assert "Development" in content
 
         # Test that generated config is valid
         from gmail_summarizer.config import Config

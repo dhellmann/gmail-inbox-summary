@@ -662,17 +662,23 @@ categories:
         - "Meeting:"
         - "Action Required:"
 
-  # GitHub/Development notifications
-  - name: "GitHub Notifications"
-    summary_prompt: "Summarize this GitHub notification, focusing on PR status, issues, and code changes."
+  # Development notifications (GitHub, GitLab, etc.)
+  - name: "Development"
+    summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
     criteria:
       from_patterns:
         - "notifications@github\\\\.com"
         - "noreply@github\\\\.com"
+        - "noreply@gitlab\\\\.com"
+        - "alerts@datadog\\\\.com"
+        - ".*@atlassian\\\\.net"  # Jira
       subject_patterns:
         - "\\\\[.*\\\\].*Pull Request"
+        - "\\\\[.*\\\\].*Merge Request"  # GitLab
         - "\\\\[.*\\\\].*Issue"
         - "\\\\[.*\\\\].*merged"
+        - "\\\\[JIRA\\\\]"
+        - "Deploy:"
 
   # Newsletter and promotional emails
   - name: "Newsletters"

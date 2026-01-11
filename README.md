@@ -100,14 +100,20 @@ categories:
         - "\\[PROJECT\\]"
         - "Meeting:"
 
-  - name: "GitHub Notifications"
-    summary_prompt: "Summarize this GitHub notification, focusing on PR status, issues, and code changes."
+  - name: "Development"
+    summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
     criteria:
       from_patterns:
         - "notifications@github\\.com"
+        - "noreply@gitlab\\.com"
+        - "alerts@datadog\\.com"
+        - ".*@atlassian\\.net"  # Jira
       subject_patterns:
         - "\\[.*\\].*Pull Request"
+        - "\\[.*\\].*Merge Request"  # GitLab
         - "\\[.*\\].*Issue"
+        - "\\[JIRA\\]"
+        - "Deploy:"
 
   - name: "Personal"
     summary_prompt: "Provide a brief, friendly summary of this personal email."

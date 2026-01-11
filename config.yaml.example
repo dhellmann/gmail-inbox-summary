@@ -55,9 +55,12 @@ categories:
         - ".*@atlassian\\.net"  # Jira
       subject_patterns:
         - "\\[.*\\].*Pull Request"
+        - "\\[.*\\].*Merge Request"  # GitLab
         - "\\[.*\\].*Issue"
         - "\\[JIRA\\]"
         - "Deploy:"
+        - "\\[.*\\].*merged"
+        - "\\[.*\\].*pipeline"  # GitLab CI/CD
 
   # Financial & Business
   - name: "Financial"
