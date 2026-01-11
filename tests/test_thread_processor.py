@@ -255,7 +255,7 @@ def test_gmail_url_generation() -> None:
     assert empty_url == "https://mail.google.com/mail/u/0/#inbox/"
 
     # Test thread without ID
-    no_id_thread = {}
+    no_id_thread: dict[str, str] = {}
     no_id_url = processor._generate_gmail_url(no_id_thread)
     assert no_id_url == "https://mail.google.com/mail/u/0/#inbox/"
 
@@ -380,7 +380,7 @@ def test_is_empty_criteria() -> None:
     assert processor._is_empty_criteria({}) is True
 
     # Test criteria with all empty lists
-    empty_criteria = {
+    empty_criteria: dict[str, list[str] | dict[str, str]] = {
         "from_patterns": [],
         "to_patterns": [],
         "subject_patterns": [],
@@ -391,7 +391,7 @@ def test_is_empty_criteria() -> None:
     assert processor._is_empty_criteria(empty_criteria) is True
 
     # Test criteria with some fields missing (should still be empty)
-    partial_empty = {
+    partial_empty: dict[str, list[str]] = {
         "from_patterns": [],
         "labels": [],
     }

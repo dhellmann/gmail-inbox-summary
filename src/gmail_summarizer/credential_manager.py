@@ -24,7 +24,7 @@ class GmailCredentials(NamedTuple):
 class CredentialManager:
     """Manages secure storage and retrieval of Gmail credentials."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize credential manager."""
         self.service_name = SERVICE_NAME
 

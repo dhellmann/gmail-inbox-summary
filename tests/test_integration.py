@@ -288,7 +288,9 @@ def test_cli_max_threads_override(sample_config_file: Path) -> None:
 
     with patch("gmail_summarizer.main.Config") as mock_config_class:
         mock_config = Mock()
-        mock_config.config = {"max_threads_per_category": 10}  # Default
+        mock_app_config = Mock()
+        mock_app_config.max_threads_per_category = 10  # Default
+        mock_config.app_config = mock_app_config
         mock_config_class.return_value = mock_config
 
         with runner.isolated_filesystem():
@@ -305,7 +307,7 @@ def test_cli_max_threads_override(sample_config_file: Path) -> None:
             )
 
             # Config should be updated with override
-            assert mock_config.config["max_threads_per_category"] == 15
+            assert mock_config.app_config.max_threads_per_category == 15
 
 
 @patch("gmail_summarizer.main.ImapGmailClient")
@@ -471,7 +473,7 @@ def test_config_generate_command() -> None:
         assert config.get_gmail_config()["email_address"] == "user@example.com"
 
 
-def test_config_generate_with_prompt(monkeypatch) -> None:
+def test_config_generate_with_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test config generate command with email prompt."""
     # Mock the Prompt.ask to return a test email
     monkeypatch.setattr(

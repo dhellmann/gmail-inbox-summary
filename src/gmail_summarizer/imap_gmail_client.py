@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 from collections.abc import Iterator
 from email.header import decode_header
-from email.message import EmailMessage
+from email.message import Message
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -150,10 +150,22 @@ class ImapGmailClient:
                 if self.imap is None:
                     continue
 
-                _, data = self.imap.fetch(msg_id, "(X-GM-THRID)")
+                _, data = self.imap.fetch(msg_id.decode(), "(X-GM-THRID)")
                 if data and data[0]:
                     # Parse thread ID from response
-                    response = data[0].decode()
+                    response_item = data[0]
+                    if isinstance(response_item, tuple):
+                        response = (
+                            response_item[1].decode()
+                            if isinstance(response_item[1], bytes)
+                            else str(response_item[1])
+                        )
+                    else:
+                        response = (
+                            response_item.decode()
+                            if isinstance(response_item, bytes)
+                            else str(response_item)
+                        )
                     match = re.search(r"X-GM-THRID (\d+)", response)
                     if match:
                         thread_id = match.group(1)
@@ -164,7 +176,9 @@ class ImapGmailClient:
 
                 threads[thread_id].append(msg_id)
             except Exception as e:
-                logger.warning(f"Error getting thread ID for message {msg_id}: {e}")
+                logger.warning(
+                    f"Error getting thread ID for message {msg_id.decode()}: {e}"
+                )
                 # Fallback to individual thread
                 thread_id = f"thread_{msg_id.decode()}"
                 threads[thread_id].append(msg_id)
@@ -225,19 +239,21 @@ class ImapGmailClient:
             else:
                 fetch_items += ")"
 
-            _, data = self.imap.fetch(msg_id, fetch_items)
+            _, data = self.imap.fetch(msg_id.decode(), fetch_items)
 
             if not data or not data[0]:
                 return None
 
             # Parse the response
-            return self._parse_message_response(msg_id, data)
+            return self._parse_message_response(msg_id.decode(), data)
 
         except Exception as e:
-            logger.error(f"Error fetching message {msg_id}: {e}")
+            logger.error(
+                f"Error fetching message {msg_id.decode() if isinstance(msg_id, bytes) else msg_id}: {e}"
+            )
             return None
 
-    def _parse_message_response(self, msg_id: bytes, data: list[Any]) -> dict[str, Any]:
+    def _parse_message_response(self, msg_id: str, data: list[Any]) -> dict[str, Any]:
         """Parse IMAP message response into Gmail API compatible format.
 
         Args:
@@ -249,8 +265,8 @@ class ImapGmailClient:
         """
         # Initialize message data
         message_data = {
-            "id": msg_id.decode(),
-            "thread_id": f"thread_{msg_id.decode()}",
+            "id": msg_id,
+            "thread_id": f"thread_{msg_id}",
             "label_ids": ["INBOX"],  # Default labels
             "snippet": "",
             "internal_date": "",
@@ -294,8 +310,9 @@ class ImapGmailClient:
             message_data["date"] = msg.get("Date", "")
 
             # Extract body
-            message_data["body"] = self._extract_body(msg)
-            message_data["snippet"] = self._create_snippet(message_data["body"])
+            body = self._extract_body(msg)
+            message_data["body"] = body
+            message_data["snippet"] = self._create_snippet(body)
 
             # Parse Gmail-specific data from first response item if available
             if data and isinstance(data[0], tuple):
@@ -385,7 +402,7 @@ class ImapGmailClient:
 
         return labels if labels else ["INBOX"]
 
-    def _extract_body(self, msg: EmailMessage) -> str:
+    def _extract_body(self, msg: Message[str]) -> str:
         """Extract message body from email message.
 
         Args:
@@ -403,13 +420,13 @@ class ImapGmailClient:
                     content_type = part.get_content_type()
                     if content_type == "text/plain":
                         payload = part.get_payload(decode=True)
-                        if payload:
+                        if payload and isinstance(payload, bytes):
                             charset = part.get_content_charset() or "utf-8"
                             body += payload.decode(charset, errors="ignore")
                     elif content_type == "text/html" and not body:
                         # Use HTML as fallback if no plain text
                         payload = part.get_payload(decode=True)
-                        if payload:
+                        if payload and isinstance(payload, bytes):
                             charset = part.get_content_charset() or "utf-8"
                             html_body = payload.decode(charset, errors="ignore")
                             # Basic HTML to text conversion
@@ -418,7 +435,7 @@ class ImapGmailClient:
             else:
                 # Handle single-part messages
                 payload = msg.get_payload(decode=True)
-                if payload:
+                if payload and isinstance(payload, bytes):
                     charset = msg.get_content_charset() or "utf-8"
                     body = payload.decode(charset, errors="ignore")
 
@@ -485,7 +502,8 @@ class ImapGmailClient:
         Returns:
             List of processed message data
         """
-        return thread.get("messages", [])
+        messages: list[dict[str, Any]] = thread.get("messages", [])
+        return messages
 
     def close(self) -> None:
         """Close IMAP connection."""
@@ -509,10 +527,10 @@ class ImapGmailClient:
 
         logger.info("IMAP connection closed")
 
-    def __enter__(self):
+    def __enter__(self) -> "ImapGmailClient":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.close()

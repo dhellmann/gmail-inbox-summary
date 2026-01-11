@@ -10,7 +10,7 @@ from gmail_summarizer.config import Config
 from gmail_summarizer.config import get_default_config_path
 
 
-def test_valid_config_validation():
+def test_valid_config_validation() -> None:
     """Test that valid configuration passes validation."""
     config_data = {
         "gmail": {
@@ -47,7 +47,7 @@ def test_valid_config_validation():
         config_path.unlink()
 
 
-def test_invalid_email_validation():
+def test_invalid_email_validation() -> None:
     """Test that invalid email address fails validation."""
     config_data = {
         "gmail": {"email_address": "invalid-email"},  # Missing @
@@ -67,7 +67,7 @@ def test_invalid_email_validation():
         config_path.unlink()
 
 
-def test_invalid_regex_pattern_validation():
+def test_invalid_regex_pattern_validation() -> None:
     """Test that invalid regex patterns fail validation."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -91,7 +91,7 @@ def test_invalid_regex_pattern_validation():
         config_path.unlink()
 
 
-def test_invalid_port_validation():
+def test_invalid_port_validation() -> None:
     """Test that invalid port numbers fail validation."""
     config_data = {
         "gmail": {
@@ -114,7 +114,7 @@ def test_invalid_port_validation():
         config_path.unlink()
 
 
-def test_invalid_timeout_validation():
+def test_invalid_timeout_validation() -> None:
     """Test that invalid timeout values fail validation."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -135,7 +135,7 @@ def test_invalid_timeout_validation():
         config_path.unlink()
 
 
-def test_empty_category_name_validation():
+def test_empty_category_name_validation() -> None:
     """Test that empty category names fail validation."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -159,7 +159,7 @@ def test_empty_category_name_validation():
         config_path.unlink()
 
 
-def test_duplicate_category_names_validation():
+def test_duplicate_category_names_validation() -> None:
     """Test that duplicate category names fail validation."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -184,7 +184,7 @@ def test_duplicate_category_names_validation():
         config_path.unlink()
 
 
-def test_invalid_max_threads_validation():
+def test_invalid_max_threads_validation() -> None:
     """Test that invalid max threads values fail validation."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -205,7 +205,7 @@ def test_invalid_max_threads_validation():
         config_path.unlink()
 
 
-def test_unknown_fields_rejected():
+def test_unknown_fields_rejected() -> None:
     """Test that unknown configuration fields are rejected."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -226,7 +226,7 @@ def test_unknown_fields_rejected():
         config_path.unlink()
 
 
-def test_default_categories_created():
+def test_default_categories_created() -> None:
     """Test that default categories are created when none provided."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -257,7 +257,7 @@ def test_default_categories_created():
         config_path.unlink()
 
 
-def test_default_category_with_empty_categories_list():
+def test_default_category_with_empty_categories_list() -> None:
     """Test that default category is created when categories list is explicitly empty."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -281,7 +281,7 @@ def test_default_category_with_empty_categories_list():
         config_path.unlink()
 
 
-def test_no_default_category_when_categories_provided():
+def test_no_default_category_when_categories_provided() -> None:
     """Test that no default category is created when categories are provided."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -310,7 +310,7 @@ def test_no_default_category_when_categories_provided():
         config_path.unlink()
 
 
-def test_unlimited_threads_per_category():
+def test_unlimited_threads_per_category() -> None:
     """Test that max_threads_per_category can be None for unlimited."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -332,7 +332,7 @@ def test_unlimited_threads_per_category():
         config_path.unlink()
 
 
-def test_header_pattern_validation():
+def test_header_pattern_validation() -> None:
     """Test that header patterns are properly validated."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
@@ -358,7 +358,7 @@ def test_header_pattern_validation():
         config_path.unlink()
 
 
-def test_get_default_config_path():
+def test_get_default_config_path() -> None:
     """Test that get_default_config_path returns appropriate paths."""
     path = get_default_config_path()
 
@@ -375,7 +375,7 @@ def test_get_default_config_path():
     assert path.is_absolute()
 
 
-def test_config_with_none_path():
+def test_config_with_none_path() -> None:
     """Test Config class with None path uses default config path."""
     # Test that None path doesn't crash and uses default logic
     import tempfile
@@ -402,7 +402,7 @@ def test_config_with_none_path():
         temp_path.unlink()
 
 
-def test_config_file_attribute_stores_path():
+def test_config_file_attribute_stores_path() -> None:
     """Test that config_file attribute stores the actual path used for loading."""
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},

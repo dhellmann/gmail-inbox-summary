@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -19,6 +20,7 @@ from rich.table import Table
 from .config import Config
 from .config import get_default_config_path
 from .credential_manager import CredentialManager
+from .credential_manager import GmailCredentials
 from .html_generator import HTMLGenerator
 from .imap_gmail_client import ImapGmailClient
 from .llm_summarizer import LLMSummarizer
@@ -272,8 +274,8 @@ def run(
         )
 
         # Override config settings if provided via CLI
-        if max_threads:
-            app_config.config["max_threads_per_category"] = max_threads
+        if max_threads and app_config.app_config:
+            app_config.app_config.max_threads_per_category = max_threads
 
         # Initialize components
         gmail_client = None
@@ -292,7 +294,7 @@ def run(
                 email_address = gmail_config.get("email_address")
 
                 # Try keychain first, fall back to config for backward compatibility
-                credentials = None
+                credentials: GmailCredentials | tuple[str, str] | None = None
                 if email_address:
                     credentials = credential_manager.get_credentials(email_address)
 
@@ -308,7 +310,7 @@ def run(
                         console.print(
                             "[yellow]Consider storing them securely: gmail-summary creds store[/yellow]"
                         )
-                        credentials = (config_email, config_password)
+                        credentials = (config_email, config_password)  # type: ignore
                     else:
                         console.print("[red]Error: Gmail credentials not found[/red]")
                         console.print(
@@ -323,6 +325,8 @@ def run(
                 if isinstance(credentials, tuple):
                     email_address, password = credentials
                 else:
+                    # credentials is a GmailCredentials object
+                    assert isinstance(credentials, GmailCredentials)
                     email_address = credentials.email_address
                     password = credentials.password
 
@@ -424,7 +428,7 @@ def run(
             ) as progress:
                 task = progress.add_task("Generating summaries", total=total_threads)
 
-                summarized_threads = {}
+                summarized_threads: dict[str, list[dict[str, Any]]] = {}
                 threads_processed = 0
 
                 for category_name, threads in categorized_threads.items():

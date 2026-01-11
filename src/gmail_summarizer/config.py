@@ -75,13 +75,15 @@ class Config:
         """Get Gmail IMAP configuration."""
         if not self.app_config:
             raise RuntimeError("Configuration not loaded")
-        return self.app_config.gmail.model_dump()
+        gmail_dict: dict[str, Any] = self.app_config.gmail.model_dump()
+        return gmail_dict
 
     def get_claude_config(self) -> dict[str, Any]:
         """Get Claude CLI configuration."""
         if not self.app_config:
             raise RuntimeError("Configuration not loaded")
-        return self.app_config.claude.model_dump()
+        claude_dict: dict[str, Any] = self.app_config.claude.model_dump()
+        return claude_dict
 
     def get_highlighting_config(self) -> dict[str, Any]:
         """Get sender highlighting configuration."""
