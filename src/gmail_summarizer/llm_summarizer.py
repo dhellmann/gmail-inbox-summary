@@ -2,6 +2,9 @@
 
 import logging
 import subprocess
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from typing import Any
 
 from .config import Config
@@ -22,6 +25,7 @@ class LLMSummarizer:
         self.claude_config = config.get_claude_config()
         self.cli_path = self.claude_config.get("cli_path", "claude")
         self.timeout = self.claude_config.get("timeout", 30)
+        self.concurrency = self.claude_config.get("concurrency", 5)
 
     def summarize_thread(
         self, thread_data: dict[str, Any], category: dict[str, Any]
@@ -210,6 +214,171 @@ class LLMSummarizer:
                 summarized_thread = self.summarize_thread(thread_data, category_config)
                 summarized_threads[category_name].append(summarized_thread)
 
+        return summarized_threads
+
+    def summarize_threads_parallel(
+        self,
+        categorized_threads: dict[str, list[dict[str, Any]]],
+        cache_manager: Any = None,
+        progress_callback: Callable[[int, str], None] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Summarize all threads in parallel with configurable concurrency.
+
+        Args:
+            categorized_threads: Output from ThreadProcessor.process_threads
+            cache_manager: Cache manager instance for checking/storing summaries
+            progress_callback: Optional callback function for progress updates
+
+        Returns:
+            Categorized threads with summaries added
+        """
+        summarized_threads: dict[str, list[dict[str, Any]]] = {}
+
+        # Prepare all tasks with their metadata
+        tasks = []
+        for category_name, threads in categorized_threads.items():
+            summarized_threads[category_name] = [None] * len(threads)  # type: ignore[list-item]  # Pre-allocate
+
+            # Find category configuration
+            category_config = None
+            for cat in self.config.get_categories():
+                if cat["name"] == category_name:
+                    category_config = cat
+                    break
+
+            if not category_config:
+                logger.warning(f"No category config found for '{category_name}'")
+                category_config = {
+                    "summary_prompt": "Provide a brief summary of this email thread."
+                }
+
+            # Create tasks for each thread
+            for thread_index, thread_data in enumerate(threads):
+                thread_id = thread_data["thread"]["id"]
+                messages = thread_data["messages"]
+
+                # Check cache first if cache manager available
+                cached_summary = None
+                if cache_manager and cache_manager.is_thread_cached(
+                    thread_id, messages
+                ):
+                    cached_summary = cache_manager.get_cached_summary(thread_id)
+
+                tasks.append(
+                    {
+                        "category_name": category_name,
+                        "thread_index": thread_index,
+                        "thread_data": thread_data,
+                        "category_config": category_config,
+                        "thread_id": thread_id,
+                        "messages": messages,
+                        "cached_summary": cached_summary,
+                    }
+                )
+
+        total_tasks = len(tasks)
+        completed_tasks = 0
+
+        def summarize_single_task(task_info: dict[str, Any]) -> dict[str, Any]:
+            """Process a single summarization task."""
+            # Use cached summary if available
+            if task_info["cached_summary"]:
+                logger.debug(
+                    f"Using cached summary for thread {task_info['thread_id']}"
+                )
+                return {
+                    **task_info,
+                    "result": task_info["cached_summary"]["summary_data"],
+                    "from_cache": True,
+                }
+
+            # Generate new summary
+            summarized_thread = self.summarize_thread(
+                task_info["thread_data"], task_info["category_config"]
+            )
+
+            # Cache the new summary if cache manager available
+            if cache_manager:
+                cache_manager.cache_thread_and_summary(
+                    task_info["thread_id"],
+                    task_info["messages"],
+                    task_info["thread_data"],
+                    summarized_thread,
+                )
+
+            return {
+                **task_info,
+                "result": summarized_thread,
+                "from_cache": False,
+            }
+
+        # Process tasks in parallel
+        logger.info(
+            f"Processing {total_tasks} threads with {self.concurrency} concurrent workers"
+        )
+
+        with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
+            # Submit all tasks
+            future_to_task = {
+                executor.submit(summarize_single_task, task): task for task in tasks
+            }
+
+            # Process completed tasks as they finish
+            for future in as_completed(future_to_task):
+                try:
+                    completed_task = future.result()
+
+                    # Store result in correct position
+                    category_name = completed_task["category_name"]
+                    thread_index = completed_task["thread_index"]
+                    summarized_threads[category_name][thread_index] = completed_task[
+                        "result"
+                    ]
+
+                    completed_tasks += 1
+
+                    # Call progress callback if provided
+                    if progress_callback:
+                        cache_status = (
+                            " (cached)" if completed_task["from_cache"] else ""
+                        )
+                        progress_callback(
+                            completed_tasks,
+                            f"Generating summaries ({completed_tasks}/{total_tasks}){cache_status}",
+                        )
+
+                    logger.debug(
+                        f"Completed task {completed_tasks}/{total_tasks} - "
+                        f"Thread {completed_task['thread_id']} in category {category_name}"
+                    )
+
+                except Exception as e:
+                    task = future_to_task[future]
+                    logger.error(f"Task failed for thread {task['thread_id']}: {e}")
+
+                    # Create error result
+                    error_result = task["thread_data"].copy()
+                    error_result.update(
+                        {
+                            "summary": f"Error generating summary: {str(e)}",
+                            "summary_generated": False,
+                            "summary_error": str(e),
+                        }
+                    )
+
+                    # Store error result
+                    category_name = task["category_name"]
+                    thread_index = task["thread_index"]
+                    summarized_threads[category_name][thread_index] = error_result
+
+                    completed_tasks += 1
+                    if progress_callback:
+                        progress_callback(
+                            completed_tasks,
+                            f"Generating summaries ({completed_tasks}/{total_tasks}) - Error",
+                        )
+
+        logger.info(f"Completed parallel summarization of {total_tasks} threads")
         return summarized_threads
 
     def get_summarization_stats(

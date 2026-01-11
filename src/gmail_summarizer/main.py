@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Any
 
 import click
 from rich.console import Console
@@ -250,6 +249,12 @@ def test_claude(config: Path | None, verbose: bool) -> None:
     help="Maximum threads per category (overrides config setting)",
 )
 @click.option(
+    "--concurrency",
+    "-j",
+    type=click.IntRange(1, 20),
+    help="Number of concurrent summarization tasks (overrides config setting, default: 5)",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     help="Process threads without generating summaries",
@@ -264,6 +269,7 @@ def run(
     config: Path | None,
     output: Path | None,
     max_threads: int | None,
+    concurrency: int | None,
     dry_run: bool,
     verbose: bool,
 ) -> None:
@@ -284,6 +290,8 @@ def run(
         # Override config settings if provided via CLI
         if max_threads and app_config.app_config:
             app_config.app_config.max_threads_per_category = max_threads
+        if concurrency and app_config.app_config:
+            app_config.app_config.claude.concurrency = concurrency
 
         # Initialize components
         gmail_client = None
@@ -441,67 +449,14 @@ def run(
             ) as progress:
                 task = progress.add_task("Generating summaries", total=total_threads)
 
-                summarized_threads: dict[str, list[dict[str, Any]]] = {}
-                threads_processed = 0
+                # Define progress callback for parallel processing
+                def update_progress(completed: int, description: str) -> None:
+                    progress.update(task, completed=completed, description=description)
 
-                for category_name, threads in categorized_threads.items():
-                    summarized_threads[category_name] = []
-
-                    # Find category configuration
-                    category_config = None
-                    for cat in app_config.get_categories():
-                        if cat["name"] == category_name:
-                            category_config = cat
-                            break
-
-                    if not category_config:
-                        # Use default prompt
-                        category_config = {
-                            "summary_prompt": "Provide a brief summary of this email thread."
-                        }
-
-                    # Process each thread with progress updates and caching
-                    for thread_data in threads:
-                        thread_id = thread_data["thread"]["id"]
-                        messages = thread_data["messages"]
-
-                        # Check cache first
-                        if cache_manager.is_thread_cached(thread_id, messages):
-                            cached_summary = cache_manager.get_cached_summary(thread_id)
-                            if cached_summary:
-                                # Use cached summary
-                                summarized_thread = cached_summary["summary_data"]
-                                logger.debug(
-                                    f"Using cached summary for thread {thread_id}"
-                                )
-                            else:
-                                # Generate new summary
-                                summarized_thread = summarizer.summarize_thread(
-                                    thread_data, category_config
-                                )
-                                # Cache the new summary
-                                cache_manager.cache_thread_and_summary(
-                                    thread_id, messages, thread_data, summarized_thread
-                                )
-                        else:
-                            # Thread content changed or not cached, generate new summary
-                            summarized_thread = summarizer.summarize_thread(
-                                thread_data, category_config
-                            )
-                            # Cache the new summary
-                            cache_manager.cache_thread_and_summary(
-                                thread_id, messages, thread_data, summarized_thread
-                            )
-
-                        summarized_threads[category_name].append(summarized_thread)
-                        threads_processed += 1
-
-                        # Update progress
-                        progress.update(
-                            task,
-                            completed=threads_processed,
-                            description=f"Generating summaries ({threads_processed}/{total_threads})",
-                        )
+                # Use parallel summarization
+                summarized_threads = summarizer.summarize_threads_parallel(
+                    categorized_threads, cache_manager, update_progress
+                )
 
             # Generate statistics
             stats = summarizer.get_summarization_stats(summarized_threads)

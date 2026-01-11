@@ -44,6 +44,9 @@ class ClaudeConfig(BaseModel):
     timeout: int = Field(
         default=30, description="Timeout in seconds for each summary request"
     )
+    concurrency: int = Field(
+        default=5, description="Number of concurrent summarization tasks"
+    )
 
     @field_validator("timeout")
     @classmethod
@@ -51,6 +54,14 @@ class ClaudeConfig(BaseModel):
         """Validate timeout range."""
         if not 1 <= v <= 600:
             raise ValueError("Timeout must be between 1 and 600 seconds")
+        return v
+
+    @field_validator("concurrency")
+    @classmethod
+    def validate_concurrency(cls, v: int) -> int:
+        """Validate concurrency range."""
+        if not 1 <= v <= 20:
+            raise ValueError("Concurrency must be between 1 and 20")
         return v
 
 

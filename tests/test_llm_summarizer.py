@@ -345,3 +345,221 @@ def test_truncate_content_if_needed() -> None:
     result = summarizer._truncate_content_if_needed(long_content, max_tokens=100)
     assert len(result) < len(long_content)
     assert "[Content truncated due to length...]" in result
+
+
+def test_parallel_summarization_initialization() -> None:
+    """Test that LLMSummarizer initializes with concurrency setting."""
+    config = Mock(spec=Config)
+    config.get_claude_config.return_value = {
+        "cli_path": "claude",
+        "timeout": 30,
+        "concurrency": 10,
+    }
+
+    summarizer = LLMSummarizer(config)
+
+    assert summarizer.concurrency == 10
+
+
+def test_parallel_summarization_without_cache() -> None:
+    """Test parallel summarization without cache manager."""
+    config = Mock(spec=Config)
+    config.get_claude_config.return_value = {"concurrency": 2}
+    config.get_categories.return_value = [
+        {"name": "Test Category", "summary_prompt": "Test prompt"}
+    ]
+
+    summarizer = LLMSummarizer(config)
+
+    # Mock the summarize_thread method to simulate processing
+    call_count = 0
+
+    def mock_summarize(thread_data: dict, category: dict) -> dict:
+        nonlocal call_count
+        call_count += 1
+        result = thread_data.copy()
+        result.update(
+            {
+                "summary": f"Summary for {thread_data['thread']['id']}",
+                "summary_generated": True,
+                "summary_error": None,
+            }
+        )
+        return result
+
+    summarizer.summarize_thread = mock_summarize  # type: ignore[method-assign]
+
+    categorized_threads = {
+        "Test Category": [
+            {
+                "thread": {"id": "thread1"},
+                "subject": "Test 1",
+                "participants": [],
+                "messages": [{"id": "msg1", "body": "content1"}],
+            },
+            {
+                "thread": {"id": "thread2"},
+                "subject": "Test 2",
+                "participants": [],
+                "messages": [{"id": "msg2", "body": "content2"}],
+            },
+        ]
+    }
+
+    # Track progress calls
+    progress_calls = []
+
+    def mock_progress(completed: int, description: str) -> None:
+        progress_calls.append((completed, description))
+
+    result = summarizer.summarize_threads_parallel(
+        categorized_threads, None, mock_progress
+    )
+
+    # Verify results
+    assert "Test Category" in result
+    assert len(result["Test Category"]) == 2
+    assert result["Test Category"][0]["summary"] == "Summary for thread1"
+    assert result["Test Category"][1]["summary"] == "Summary for thread2"
+
+    # Verify all threads were processed
+    assert call_count == 2
+
+    # Verify progress was called
+    assert len(progress_calls) == 2
+    assert progress_calls[-1][0] == 2  # Final count
+
+
+def test_parallel_summarization_with_cache() -> None:
+    """Test parallel summarization with cache manager."""
+    config = Mock(spec=Config)
+    config.get_claude_config.return_value = {"concurrency": 2}
+    config.get_categories.return_value = [
+        {"name": "Test Category", "summary_prompt": "Test prompt"}
+    ]
+
+    summarizer = LLMSummarizer(config)
+
+    # Mock cache manager
+    cache_manager = Mock()
+    cache_manager.is_thread_cached.side_effect = [
+        True,
+        False,
+    ]  # First cached, second not
+    cache_manager.get_cached_summary.return_value = {
+        "summary_data": {
+            "thread": {"id": "thread1"},
+            "summary": "Cached summary for thread1",
+            "summary_generated": True,
+            "summary_error": None,
+        }
+    }
+
+    # Mock the summarize_thread method for non-cached threads
+    def mock_summarize(thread_data: dict, category: dict) -> dict:
+        result = thread_data.copy()
+        result.update(
+            {
+                "summary": f"New summary for {thread_data['thread']['id']}",
+                "summary_generated": True,
+                "summary_error": None,
+            }
+        )
+        return result
+
+    summarizer.summarize_thread = mock_summarize  # type: ignore[method-assign]
+
+    categorized_threads = {
+        "Test Category": [
+            {
+                "thread": {"id": "thread1"},
+                "subject": "Test 1",
+                "participants": [],
+                "messages": [{"id": "msg1", "body": "content1"}],
+            },
+            {
+                "thread": {"id": "thread2"},
+                "subject": "Test 2",
+                "participants": [],
+                "messages": [{"id": "msg2", "body": "content2"}],
+            },
+        ]
+    }
+
+    result = summarizer.summarize_threads_parallel(categorized_threads, cache_manager)
+
+    # Verify results
+    assert "Test Category" in result
+    assert len(result["Test Category"]) == 2
+    assert result["Test Category"][0]["summary"] == "Cached summary for thread1"
+    assert result["Test Category"][1]["summary"] == "New summary for thread2"
+
+    # Verify cache operations
+    assert cache_manager.is_thread_cached.call_count == 2
+    cache_manager.cache_thread_and_summary.assert_called_once()  # Only for non-cached thread
+
+
+def test_parallel_summarization_error_handling() -> None:
+    """Test parallel summarization error handling."""
+    config = Mock(spec=Config)
+    config.get_claude_config.return_value = {"concurrency": 2}
+    config.get_categories.return_value = [
+        {"name": "Test Category", "summary_prompt": "Test prompt"}
+    ]
+
+    summarizer = LLMSummarizer(config)
+
+    # Mock the summarize_thread method to raise an error for the first thread
+    def mock_summarize(thread_data: dict, category: dict) -> dict:
+        if thread_data["thread"]["id"] == "thread1":
+            raise ValueError("Test error for thread1")
+
+        result = thread_data.copy()
+        result.update(
+            {
+                "summary": f"Summary for {thread_data['thread']['id']}",
+                "summary_generated": True,
+                "summary_error": None,
+            }
+        )
+        return result
+
+    summarizer.summarize_thread = mock_summarize  # type: ignore[method-assign]
+
+    categorized_threads = {
+        "Test Category": [
+            {
+                "thread": {"id": "thread1"},
+                "subject": "Test 1",
+                "participants": [],
+                "messages": [{"id": "msg1", "body": "content1"}],
+            },
+            {
+                "thread": {"id": "thread2"},
+                "subject": "Test 2",
+                "participants": [],
+                "messages": [{"id": "msg2", "body": "content2"}],
+            },
+        ]
+    }
+
+    result = summarizer.summarize_threads_parallel(categorized_threads)
+
+    # Verify results - both threads should be present, one with error
+    assert "Test Category" in result
+    assert len(result["Test Category"]) == 2
+
+    # Check that error was handled properly
+    thread1_result = next(
+        t for t in result["Test Category"] if t["thread"]["id"] == "thread1"
+    )
+    thread2_result = next(
+        t for t in result["Test Category"] if t["thread"]["id"] == "thread2"
+    )
+
+    assert "Error generating summary" in thread1_result["summary"]
+    assert thread1_result["summary_generated"] is False
+    assert "Test error for thread1" in thread1_result["summary_error"]
+
+    assert thread2_result["summary"] == "Summary for thread2"
+    assert thread2_result["summary_generated"] is True

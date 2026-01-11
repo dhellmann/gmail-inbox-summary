@@ -19,7 +19,7 @@ def test_valid_config_validation() -> None:
             "imap_server": "imap.gmail.com",
             "imap_port": 993,
         },
-        "claude": {"cli_path": "claude", "timeout": 30},
+        "claude": {"cli_path": "claude", "timeout": 30, "concurrency": 5},
         "categories": [
             {
                 "name": "Test Category",
@@ -41,6 +41,7 @@ def test_valid_config_validation() -> None:
         assert config.app_config is not None
         assert config.get_gmail_config()["email_address"] == "test@gmail.com"
         assert config.get_claude_config()["timeout"] == 30
+        assert config.get_claude_config()["concurrency"] == 5
         assert len(config.get_categories()) == 1
         assert config.get_max_threads_per_category() == 25
     finally:
@@ -119,6 +120,27 @@ def test_invalid_timeout_validation() -> None:
     config_data = {
         "gmail": {"email_address": "test@gmail.com"},
         "claude": {"timeout": 700},  # Timeout too large
+        "categories": [
+            {"name": "Test", "summary_prompt": "Test prompt", "criteria": {}}
+        ],
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        config_path = Path(f.name)
+
+    try:
+        with pytest.raises(ValueError, match="Invalid configuration"):
+            Config(str(config_path))
+    finally:
+        config_path.unlink()
+
+
+def test_invalid_concurrency_validation() -> None:
+    """Test that invalid concurrency values fail validation."""
+    config_data = {
+        "gmail": {"email_address": "test@gmail.com"},
+        "claude": {"concurrency": 25},  # Concurrency too large
         "categories": [
             {"name": "Test", "summary_prompt": "Test prompt", "criteria": {}}
         ],

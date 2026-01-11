@@ -576,3 +576,15 @@ def test_cache_commands() -> None:
     # Test cache cleanup
     result = runner.invoke(cli, ["cache", "cleanup"])
     assert result.exit_code == 0
+
+
+def test_run_command_with_concurrency_option() -> None:
+    """Test run command with concurrency option."""
+    runner = CliRunner()
+
+    # Test run command help includes concurrency option
+    result = runner.invoke(cli, ["run", "--help"])
+    assert result.exit_code == 0
+    assert "--concurrency" in result.output
+    assert "-j" in result.output
+    assert "Number of concurrent summarization tasks" in result.output
