@@ -114,8 +114,8 @@ class Config:
             raise RuntimeError("Configuration not loaded")
         return self.app_config.important_senders
 
-    def get_max_threads_per_category(self) -> int:
-        """Get maximum threads to process per category."""
+    def get_max_threads_per_category(self) -> int | None:
+        """Get maximum threads to process per category (None means unlimited)."""
         if not self.app_config:
             raise RuntimeError("Configuration not loaded")
         return self.app_config.max_threads_per_category

@@ -197,7 +197,9 @@ def test_claude(config: Path | None, verbose: bool) -> None:
     try:
         # Load configuration
         app_config = Config(str(config) if config else None)
-        console.print(f"[green]✓[/green] Loaded configuration from {app_config.config_file}")
+        console.print(
+            f"[green]✓[/green] Loaded configuration from {app_config.config_file}"
+        )
 
         # Test Claude CLI connection
         summarizer = LLMSummarizer(app_config)
@@ -265,7 +267,9 @@ def run(
     try:
         # Load configuration
         app_config = Config(str(config) if config else None)
-        console.print(f"[green]✓[/green] Loaded configuration from {app_config.config_file}")
+        console.print(
+            f"[green]✓[/green] Loaded configuration from {app_config.config_file}"
+        )
 
         # Override config settings if provided via CLI
         if max_threads:
@@ -355,7 +359,7 @@ def run(
 
             # Fetch and process threads
             console.print("\n[yellow]Fetching Gmail threads...[/yellow]")
-            
+
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -377,7 +381,7 @@ def run(
                     progress.update(
                         task,
                         completed=len(threads_data),
-                        description="Fetching inbox threads"
+                        description="Fetching inbox threads",
                     )
 
                     # Stop if we have enough for testing
@@ -403,7 +407,9 @@ def run(
             console.print("\n[yellow]Generating AI summaries...[/yellow]")
 
             # Calculate total threads for progress tracking
-            total_threads = sum(len(threads) for threads in categorized_threads.values())
+            total_threads = sum(
+                len(threads) for threads in categorized_threads.values()
+            )
 
             with Progress(
                 SpinnerColumn(),
@@ -439,7 +445,9 @@ def run(
 
                     # Process each thread with progress updates
                     for thread_data in threads:
-                        summarized_thread = summarizer.summarize_thread(thread_data, category_config)
+                        summarized_thread = summarizer.summarize_thread(
+                            thread_data, category_config
+                        )
                         summarized_threads[category_name].append(summarized_thread)
                         threads_processed += 1
 
@@ -447,7 +455,7 @@ def run(
                         progress.update(
                             task,
                             completed=threads_processed,
-                            description=f"Generating summaries ({threads_processed}/{total_threads})"
+                            description=f"Generating summaries ({threads_processed}/{total_threads})",
                         )
 
             # Generate statistics
@@ -698,7 +706,7 @@ important_senders:
 
 # Output Configuration
 output_file: "inbox_summary.html"
-max_threads_per_category: 20
+# max_threads_per_category: null  # null/None for unlimited (default), or set a number like 50
 '''
     return template
 

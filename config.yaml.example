@@ -127,7 +127,7 @@ important_senders:
 
 # Output Configuration
 output_file: "inbox_summary.html"
-max_threads_per_category: 25
+# max_threads_per_category: null  # null for unlimited (default), or set a number like 50
 
 # Optional: Advanced Gmail Settings
 # gmail:

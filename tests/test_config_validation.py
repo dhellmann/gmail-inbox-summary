@@ -310,6 +310,28 @@ def test_no_default_category_when_categories_provided():
         config_path.unlink()
 
 
+def test_unlimited_threads_per_category():
+    """Test that max_threads_per_category can be None for unlimited."""
+    config_data = {
+        "gmail": {"email_address": "test@gmail.com"},
+        "max_threads_per_category": None,  # Unlimited
+        "categories": [
+            {"name": "Test", "summary_prompt": "Test prompt", "criteria": {}}
+        ],
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        config_path = Path(f.name)
+
+    try:
+        config = Config(str(config_path))
+        assert config.app_config is not None
+        assert config.get_max_threads_per_category() is None
+    finally:
+        config_path.unlink()
+
+
 def test_header_pattern_validation():
     """Test that header patterns are properly validated."""
     config_data = {
@@ -394,7 +416,7 @@ def test_config_file_attribute_stores_path():
         # Test explicit path
         config = Config(str(temp_path))
         assert config.config_file == temp_path
-        
+
         # Test that it matches what was loaded
         assert config.config_file.exists()
         assert config.app_config is not None

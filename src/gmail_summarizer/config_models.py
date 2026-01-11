@@ -145,8 +145,8 @@ class AppConfig(BaseModel):
     output_file: str = Field(
         default="inbox_summary.html", description="Output HTML filename"
     )
-    max_threads_per_category: int = Field(
-        default=50, description="Maximum threads per category"
+    max_threads_per_category: int | None = Field(
+        default=None, description="Maximum threads per category (None for unlimited)"
     )
 
     @field_validator("important_senders")
@@ -162,10 +162,14 @@ class AppConfig(BaseModel):
 
     @field_validator("max_threads_per_category")
     @classmethod
-    def validate_max_threads(cls, v: int) -> int:
+    def validate_max_threads(cls, v: int | None) -> int | None:
         """Validate max threads range."""
-        if not 1 <= v <= 1000:
-            raise ValueError("max_threads_per_category must be between 1 and 1000")
+        if v is None:
+            return None  # None means unlimited
+        if not isinstance(v, int) or not 1 <= v <= 1000:
+            raise ValueError(
+                "max_threads_per_category must be between 1 and 1000, or None for unlimited"
+            )
         return v
 
     @field_validator("categories")

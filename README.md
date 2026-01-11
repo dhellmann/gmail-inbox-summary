@@ -117,7 +117,7 @@ important_senders:
 
 # Output Configuration
 output_file: "inbox_summary.html"
-max_threads_per_category: 20
+# max_threads_per_category: null  # null for unlimited (default), or set a number like 50
 ```
 
 ### 4. Basic Usage
@@ -249,7 +249,7 @@ important_senders:
 
 # Output settings
 output_file: "reports/daily_summary.html"
-max_threads_per_category: 50
+max_threads_per_category: 50  # Or use null for unlimited processing
 
 # Rate limiting (optional)
 gmail:
@@ -492,7 +492,7 @@ This shows:
 
 ### Performance Tips
 
-- Use `max_threads_per_category` to limit processing time
+- Use `max_threads_per_category` to limit processing time (or set to `null` for unlimited processing)
 - Test with `--dry-run` first to verify configuration
 - Consider running during off-peak hours for large inboxes
 - Use specific Gmail labels to pre-filter threads

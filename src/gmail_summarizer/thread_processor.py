@@ -213,14 +213,15 @@ class ThreadProcessor:
 
         # Limit threads per category if configured
         max_threads = self.config.get_max_threads_per_category()
-        for category_name in categorized_threads:
-            if len(categorized_threads[category_name]) > max_threads:
-                logger.info(
-                    f"Limiting category '{category_name}' to {max_threads} threads"
-                )
-                categorized_threads[category_name] = categorized_threads[category_name][
-                    :max_threads
-                ]
+        if max_threads is not None:
+            for category_name in categorized_threads:
+                if len(categorized_threads[category_name]) > max_threads:
+                    logger.info(
+                        f"Limiting category '{category_name}' to {max_threads} threads"
+                    )
+                    categorized_threads[category_name] = categorized_threads[
+                        category_name
+                    ][:max_threads]
 
         return categorized_threads
 
