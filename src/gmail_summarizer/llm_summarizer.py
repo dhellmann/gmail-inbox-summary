@@ -2,8 +2,6 @@
 
 import logging
 import subprocess
-import tempfile
-from pathlib import Path
 from typing import Any
 
 from .config import Config
@@ -143,33 +141,22 @@ class LLMSummarizer:
         full_prompt = f"{prompt}\n\nThread content:\n{content}"
 
         try:
-            # Use temporary file for input to handle large content
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as temp_file:
-                temp_file.write(full_prompt)
-                temp_path = temp_file.name
+            # Call Claude Code CLI with content via stdin
+            result = subprocess.run(
+                [self.cli_path, "--print"],
+                input=full_prompt,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+                check=True,
+            )
 
-            try:
-                # Call Claude Code CLI
-                result = subprocess.run(
-                    [self.cli_path, "code", "--file", temp_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=self.timeout,
-                    check=True,
-                )
+            summary = result.stdout.strip()
 
-                summary = result.stdout.strip()
+            if not summary:
+                raise ValueError("Claude CLI returned empty response")
 
-                if not summary:
-                    raise ValueError("Claude CLI returned empty response")
-
-                return summary
-
-            finally:
-                # Clean up temporary file
-                Path(temp_path).unlink(missing_ok=True)
+            return summary
 
         except FileNotFoundError as e:
             raise FileNotFoundError(
