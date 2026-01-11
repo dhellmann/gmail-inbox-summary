@@ -650,6 +650,16 @@ claude:
 
 # Thread Categories - processed in order, first match wins
 categories:
+  # Important/urgent emails - checked first for highest priority
+  - name: "Important Messages"
+    summary_prompt: "Summarize this important email, highlighting urgency and required actions."
+    criteria:
+      labels:
+        - "IMPORTANT"
+      subject_patterns:
+        - "URGENT"
+        - "\\\\[HIGH PRIORITY\\\\]"
+
   # Development notifications (GitHub, GitLab, etc.)
   - name: "Development"
     summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
@@ -682,16 +692,6 @@ categories:
         - "Weekly.*"
         - "Monthly.*"
         - "Digest"
-
-  # Important/urgent emails
-  - name: "Important Messages"
-    summary_prompt: "Summarize this important email, highlighting urgency and required actions."
-    criteria:
-      labels:
-        - "IMPORTANT"
-      subject_patterns:
-        - "URGENT"
-        - "\\\\[HIGH PRIORITY\\\\]"
 
   # Everything else (catch-all category)
   - name: "General Email"
