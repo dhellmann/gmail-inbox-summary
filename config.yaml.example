@@ -13,6 +13,8 @@ claude:
   cli_path: "claude"     # Path to Claude Code CLI executable
   timeout: 30           # Timeout in seconds for each summary request
   concurrency: 5        # Number of concurrent summarization tasks (1-20, default: 5)
+                        # Higher values = faster processing, more resources
+                        # Example: concurrency: 10 for large inboxes
 
 # Thread Categories
 # Categories are processed in order they appear below - first match wins

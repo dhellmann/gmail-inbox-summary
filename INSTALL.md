@@ -102,10 +102,11 @@ gmail-summary --help
      password: "your-app-specific-password"     # App password from step 2
    ```
 
-4. **Customize Categories:**
+4. **Customize Categories and Performance:**
    - Modify email patterns to match your inbox
    - Adjust summary prompts for your needs
    - Set appropriate output file location
+   - Configure parallel processing: `concurrency: 5` (default) to `concurrency: 10` (faster)
 
 ## Verification
 
@@ -120,6 +121,9 @@ gmail-summary --test-claude
 
 # Generate actual summary (if all tests pass)
 gmail-summary
+
+# Test with parallel processing for faster results
+gmail-summary --concurrency 8 --max-threads 25
 ```
 
 ## Troubleshooting
