@@ -64,7 +64,7 @@ class ThreadProcessor:
         # Empty criteria matches everything (catch-all)
         if not criteria:
             return True
-            
+
         # Criteria with all empty lists/dicts also matches everything (catch-all)
         if self._is_empty_criteria(criteria):
             return True
@@ -293,23 +293,29 @@ class ThreadProcessor:
 
     def _is_empty_criteria(self, criteria: dict[str, Any]) -> bool:
         """Check if criteria contains only empty lists and dicts (catch-all).
-        
+
         Args:
             criteria: Category criteria dictionary
-            
+
         Returns:
             True if all criteria fields are empty
         """
         # Check if all pattern lists are empty
-        pattern_fields = ["from_patterns", "to_patterns", "subject_patterns", "content_patterns", "labels"]
+        pattern_fields = [
+            "from_patterns",
+            "to_patterns",
+            "subject_patterns",
+            "content_patterns",
+            "labels",
+        ]
         for field in pattern_fields:
             if criteria.get(field) and len(criteria[field]) > 0:
                 return False
-        
+
         # Check if headers dict is empty
         if criteria.get("headers") and len(criteria["headers"]) > 0:
             return False
-            
+
         return True
 
     def _generate_gmail_url(self, thread: dict[str, Any]) -> str:

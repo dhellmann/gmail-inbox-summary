@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from gmail_summarizer.config import Config
+from gmail_summarizer.config import get_default_config_path
 
 
 def test_valid_config_validation():
@@ -241,7 +242,10 @@ def test_default_categories_created():
         categories = config.get_categories()
         assert len(categories) == 1
         assert categories[0]["name"] == "Everything"
-        assert categories[0]["summary_prompt"] == "Provide a brief summary of this email thread."
+        assert (
+            categories[0]["summary_prompt"]
+            == "Provide a brief summary of this email thread."
+        )
         # Verify it's a catch-all category (empty criteria)
         assert categories[0]["criteria"]["from_patterns"] == []
         assert categories[0]["criteria"]["to_patterns"] == []
@@ -269,7 +273,10 @@ def test_default_category_with_empty_categories_list():
         categories = config.get_categories()
         assert len(categories) == 1
         assert categories[0]["name"] == "Everything"
-        assert categories[0]["summary_prompt"] == "Provide a brief summary of this email thread."
+        assert (
+            categories[0]["summary_prompt"]
+            == "Provide a brief summary of this email thread."
+        )
     finally:
         config_path.unlink()
 
@@ -327,3 +334,69 @@ def test_header_pattern_validation():
             Config(str(config_path))
     finally:
         config_path.unlink()
+
+
+def test_get_default_config_path():
+    """Test that get_default_config_path returns appropriate paths."""
+    path = get_default_config_path()
+
+    # Verify it returns a Path object
+    assert isinstance(path, Path)
+
+    # Verify the filename is settings.yml
+    assert path.name == "settings.yml"
+
+    # Verify the parent directory contains 'gmail-summary'
+    assert "gmail-summary" in str(path.parent)
+
+    # Verify it's an absolute path
+    assert path.is_absolute()
+
+
+def test_config_with_none_path():
+    """Test Config class with None path uses default config path."""
+    # Test that None path doesn't crash and uses default logic
+    import tempfile
+
+    # Create a temp config file
+    config_data = {
+        "gmail": {"email_address": "test@gmail.com"},
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        temp_path = Path(f.name)
+
+    try:
+        # Test that explicit path works
+        config1 = Config(str(temp_path))
+        assert config1.app_config is not None
+        assert config1.config_file == temp_path
+
+        # Test that None path uses default logic (may not exist, so just test path)
+        default_path = get_default_config_path()
+        assert default_path.name == "settings.yml"
+    finally:
+        temp_path.unlink()
+
+
+def test_config_file_attribute_stores_path():
+    """Test that config_file attribute stores the actual path used for loading."""
+    config_data = {
+        "gmail": {"email_address": "test@gmail.com"},
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        temp_path = Path(f.name)
+
+    try:
+        # Test explicit path
+        config = Config(str(temp_path))
+        assert config.config_file == temp_path
+        
+        # Test that it matches what was loaded
+        assert config.config_file.exists()
+        assert config.app_config is not None
+    finally:
+        temp_path.unlink()

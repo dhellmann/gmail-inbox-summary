@@ -1,6 +1,7 @@
 """Configuration management for gmail_summarizer."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -12,16 +13,39 @@ from .config_models import AppConfig
 logger = logging.getLogger(__name__)
 
 
+def get_default_config_path() -> Path:
+    """Get the default configuration file path following platform conventions.
+
+    Returns:
+        Path to the default configuration file in the appropriate config directory
+    """
+    # Determine the config directory based on platform
+    if os.name == "nt":  # Windows
+        config_dir = (
+            Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+            / "gmail-summary"
+        )
+    elif os.environ.get("XDG_CONFIG_HOME"):  # Linux/Unix with XDG
+        config_dir = Path(os.environ["XDG_CONFIG_HOME"]) / "gmail-summary"
+    else:  # macOS and Linux/Unix without XDG
+        config_dir = Path.home() / ".config" / "gmail-summary"
+
+    return config_dir / "settings.yml"
+
+
 class Config:
     """Configuration manager for gmail_summarizer."""
 
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str | None = None):
         """Initialize configuration manager.
 
         Args:
-            config_path: Path to the configuration YAML file
+            config_path: Path to the configuration YAML file. If None, uses platform-specific default.
         """
-        self.config_file = Path(config_path)
+        if config_path is None:
+            self.config_file = get_default_config_path()
+        else:
+            self.config_file = Path(config_path)
         self.app_config: AppConfig | None = None  # Validated pydantic model
         self._load_config()
 

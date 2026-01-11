@@ -14,6 +14,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from .config import Config
+from .config import get_default_config_path
 from .credential_manager import CredentialManager
 from .html_generator import HTMLGenerator
 from .imap_gmail_client import ImapGmailClient
@@ -52,7 +53,7 @@ def cli() -> None:
     Before running, ensure you have:
     1. Set up Gmail IMAP access and stored credentials securely
     2. Installed Claude Code CLI and authenticated
-    3. Configured categories in config.yaml
+    3. Created configuration file (use: gmail-summary config generate)
     """
     pass
 
@@ -177,9 +178,8 @@ def delete(email: str) -> None:
 @click.option(
     "--config",
     "-c",
-    type=click.Path(exists=True, path_type=Path),
-    default="config.yaml",
-    help="Path to configuration file (default: config.yaml)",
+    type=click.Path(path_type=Path),
+    help="Path to configuration file (default: platform-specific config directory)",
 )
 @click.option(
     "--verbose",
@@ -187,14 +187,14 @@ def delete(email: str) -> None:
     is_flag=True,
     help="Enable verbose logging",
 )
-def test_claude(config: Path, verbose: bool) -> None:
+def test_claude(config: Path | None, verbose: bool) -> None:
     """Test Claude CLI connection."""
     setup_logging(verbose)
 
     try:
         # Load configuration
-        app_config = Config(str(config))
-        console.print(f"[green]✓[/green] Loaded configuration from {config}")
+        app_config = Config(str(config) if config else None)
+        console.print(f"[green]✓[/green] Loaded configuration from {app_config.config_file}")
 
         # Test Claude CLI connection
         summarizer = LLMSummarizer(app_config)
@@ -219,9 +219,8 @@ def test_claude(config: Path, verbose: bool) -> None:
 @click.option(
     "--config",
     "-c",
-    type=click.Path(exists=True, path_type=Path),
-    default="config.yaml",
-    help="Path to configuration file (default: config.yaml)",
+    type=click.Path(path_type=Path),
+    help="Path to configuration file (default: platform-specific config directory)",
 )
 @click.option(
     "--output",
@@ -247,7 +246,7 @@ def test_claude(config: Path, verbose: bool) -> None:
     help="Enable verbose logging",
 )
 def run(
-    config: Path,
+    config: Path | None,
     output: Path | None,
     max_threads: int | None,
     dry_run: bool,
@@ -262,8 +261,8 @@ def run(
 
     try:
         # Load configuration
-        app_config = Config(str(config))
-        console.print(f"[green]✓[/green] Loaded configuration from {config}")
+        app_config = Config(str(config) if config else None)
+        console.print(f"[green]✓[/green] Loaded configuration from {app_config.config_file}")
 
         # Override config settings if provided via CLI
         if max_threads:
@@ -506,40 +505,36 @@ def config() -> None:
 
 
 @config.command()
+@click.option("--email", "-e", help="Gmail email address to use in the configuration")
 @click.option(
-    "--email", "-e",
-    help="Gmail email address to use in the configuration"
-)
-@click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     type=click.Path(exists=False),
-    default="config.yaml",
-    help="Output file path for the configuration file"
+    help="Output file path (default: platform-specific config directory)",
 )
 @click.option(
-    "--force", "-f",
-    is_flag=True,
-    help="Overwrite existing configuration file"
+    "--force", "-f", is_flag=True, help="Overwrite existing configuration file"
 )
-def generate(email: str | None, output: str, force: bool) -> None:
+def generate(email: str | None, output: str | None, force: bool) -> None:
     """Generate a minimal configuration file with example content.
 
     Creates a sample configuration file with sensible defaults and example
     categories. You can customize the Gmail email address and output location.
     """
-    output_path = Path(output)
+    output_path = Path(output) if output else get_default_config_path()
 
     # Check if file exists and not forced
     if output_path.exists() and not force:
         console.print(f"[red]Configuration file already exists at {output_path}[/red]")
-        console.print("[yellow]Use --force to overwrite or specify a different --output path[/yellow]")
+        console.print(
+            "[yellow]Use --force to overwrite or specify a different --output path[/yellow]"
+        )
         raise click.Abort()
 
     # Get email address if not provided
     if not email:
         email = Prompt.ask(
-            "[cyan]Gmail email address[/cyan]",
-            default="your.email@gmail.com"
+            "[cyan]Gmail email address[/cyan]", default="your.email@gmail.com"
         )
 
     # Generate configuration content
@@ -553,10 +548,16 @@ def generate(email: str | None, output: str, force: bool) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(config_content)
 
-        console.print(f"[green]✓ Configuration file created: {output_path.absolute()}[/green]")
+        console.print(
+            f"[green]✓ Configuration file created: {output_path.absolute()}[/green]"
+        )
         console.print("\n[yellow]Next steps:[/yellow]")
-        console.print(f"1. Store your Gmail credentials: [cyan]gmail-summary creds store --email {email}[/cyan]")
-        console.print("2. Test Claude CLI connection: [cyan]gmail-summary test-claude[/cyan]")
+        console.print(
+            f"1. Store your Gmail credentials: [cyan]gmail-summary creds store --email {email}[/cyan]"
+        )
+        console.print(
+            "2. Test Claude CLI connection: [cyan]gmail-summary test-claude[/cyan]"
+        )
         console.print("3. Review and customize the configuration file")
         console.print("4. Run a test summary: [cyan]gmail-summary run --dry-run[/cyan]")
 

@@ -432,7 +432,15 @@ def test_config_generate_command() -> None:
     with runner.isolated_filesystem():
         # Test with email provided
         result = runner.invoke(
-            cli, ["config", "generate", "--email", "user@example.com", "--output", "test.yaml"]
+            cli,
+            [
+                "config",
+                "generate",
+                "--email",
+                "user@example.com",
+                "--output",
+                "test.yaml",
+            ],
         )
 
         assert result.exit_code == 0
@@ -445,13 +453,14 @@ def test_config_generate_command() -> None:
 
         # Verify content
         content = config_file.read_text(encoding="utf-8")
-        assert "email_address: \"user@example.com\"" in content
+        assert 'email_address: "user@example.com"' in content
         assert "categories:" in content
         assert "Work Email" in content
         assert "GitHub Notifications" in content
 
         # Test that generated config is valid
         from gmail_summarizer.config import Config
+
         config = Config(str(config_file))
         assert config.app_config is not None
         assert config.get_gmail_config()["email_address"] == "user@example.com"
@@ -460,21 +469,22 @@ def test_config_generate_command() -> None:
 def test_config_generate_with_prompt(monkeypatch) -> None:
     """Test config generate command with email prompt."""
     # Mock the Prompt.ask to return a test email
-    monkeypatch.setattr("gmail_summarizer.main.Prompt.ask", lambda *args, **kwargs: "prompted@example.com")
+    monkeypatch.setattr(
+        "gmail_summarizer.main.Prompt.ask",
+        lambda *args, **kwargs: "prompted@example.com",
+    )
 
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(
-            cli, ["config", "generate", "--output", "prompted.yaml"]
-        )
+        result = runner.invoke(cli, ["config", "generate", "--output", "prompted.yaml"])
 
         assert result.exit_code == 0
 
         # Check file content contains prompted email
         config_file = Path("prompted.yaml")
         content = config_file.read_text(encoding="utf-8")
-        assert "email_address: \"prompted@example.com\"" in content
+        assert 'email_address: "prompted@example.com"' in content
 
 
 def test_config_generate_file_exists() -> None:
@@ -488,7 +498,15 @@ def test_config_generate_file_exists() -> None:
 
         # Try to generate without force
         result = runner.invoke(
-            cli, ["config", "generate", "--email", "test@example.com", "--output", "existing.yaml"]
+            cli,
+            [
+                "config",
+                "generate",
+                "--email",
+                "test@example.com",
+                "--output",
+                "existing.yaml",
+            ],
         )
 
         assert result.exit_code != 0
@@ -500,12 +518,21 @@ def test_config_generate_file_exists() -> None:
 
         # Test with force flag
         result = runner.invoke(
-            cli, ["config", "generate", "--email", "test@example.com", "--output", "existing.yaml", "--force"]
+            cli,
+            [
+                "config",
+                "generate",
+                "--email",
+                "test@example.com",
+                "--output",
+                "existing.yaml",
+                "--force",
+            ],
         )
 
         assert result.exit_code == 0
         content = existing_file.read_text(encoding="utf-8")
-        assert "email_address: \"test@example.com\"" in content
+        assert 'email_address: "test@example.com"' in content
 
 
 def test_config_generate_help() -> None:

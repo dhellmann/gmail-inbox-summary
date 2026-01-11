@@ -59,7 +59,19 @@ Before using the application, you need:
 
 ### 3. Configuration
 
-Create a configuration file `config.yaml`:
+Create a configuration file using the built-in generator, or manually create one at the default location:
+
+**Quick Start:**
+```bash
+gmail-summary config generate --email your.email@gmail.com
+```
+
+**Manual Configuration:**
+The configuration file is automatically placed in the platform-specific config directory:
+- **macOS/Linux**: `~/.config/gmail-summary/settings.yml`
+- **Windows**: `%APPDATA%/gmail-summary/settings.yml`
+
+Example configuration:
 
 ```yaml
 # Gmail IMAP Configuration
@@ -262,7 +274,7 @@ Main Command:
   gmail-summary run [OPTIONS]
 
   Options:
-    -c, --config PATH       Configuration file path (default: config.yaml)
+    -c, --config PATH       Configuration file path (default: platform-specific)
     -o, --output PATH       Output HTML file path (overrides config)
     -n, --max-threads INT  Maximum threads per category (overrides config)
     --dry-run              Process threads without generating summaries
@@ -273,7 +285,7 @@ Test Command:
   gmail-summary test-claude [OPTIONS]
   
   Options:
-    -c, --config PATH      Configuration file path (default: config.yaml)
+    -c, --config PATH      Configuration file path (default: platform-specific)
     -v, --verbose         Enable verbose logging
     --help                Show this message and exit
 
@@ -290,7 +302,7 @@ Credential Management:
 Configuration Management:
   gmail-summary config generate [OPTIONS]  # Generate example configuration file
     -e, --email TEXT       Gmail email address to use in config
-    -o, --output PATH      Configuration file output path (default: config.yaml)
+    -o, --output PATH      Configuration file output path (default: platform-specific)
     -f, --force            Overwrite existing configuration file
 ```
 

@@ -357,11 +357,11 @@ def test_default_everything_category_matches_all() -> None:
     ]
 
     result = processor.process_threads(threads_data)
-    
+
     # All threads should be categorized under "Everything"
     assert "Everything" in result
     assert len(result["Everything"]) == 3
-    
+
     # Verify all threads are in the Everything category
     subjects = [thread["subject"] for thread in result["Everything"]]
     assert "Random subject" in subjects
@@ -375,10 +375,10 @@ def test_is_empty_criteria() -> None:
     config.get_categories.return_value = []
     config.get_important_senders.return_value = []
     processor = ThreadProcessor(config)
-    
+
     # Test empty dict
     assert processor._is_empty_criteria({}) is True
-    
+
     # Test criteria with all empty lists
     empty_criteria = {
         "from_patterns": [],
@@ -389,14 +389,14 @@ def test_is_empty_criteria() -> None:
         "labels": [],
     }
     assert processor._is_empty_criteria(empty_criteria) is True
-    
+
     # Test criteria with some fields missing (should still be empty)
     partial_empty = {
         "from_patterns": [],
         "labels": [],
     }
     assert processor._is_empty_criteria(partial_empty) is True
-    
+
     # Test criteria with non-empty from_patterns
     non_empty_from = {
         "from_patterns": ["test@example.com"],
@@ -407,7 +407,7 @@ def test_is_empty_criteria() -> None:
         "labels": [],
     }
     assert processor._is_empty_criteria(non_empty_from) is False
-    
+
     # Test criteria with non-empty labels
     non_empty_labels = {
         "from_patterns": [],
@@ -418,7 +418,7 @@ def test_is_empty_criteria() -> None:
         "labels": ["IMPORTANT"],
     }
     assert processor._is_empty_criteria(non_empty_labels) is False
-    
+
     # Test criteria with non-empty headers
     non_empty_headers = {
         "from_patterns": [],
