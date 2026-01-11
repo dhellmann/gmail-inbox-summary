@@ -54,7 +54,8 @@ class ImapGmailClient:
                 else:
                     capabilities = self.imap.capabilities
 
-                if b"X-GM-EXT-1" in capabilities:
+                # Check for Gmail extensions - handle both bytes and string formats
+                if b"X-GM-EXT-1" in capabilities or "X-GM-EXT-1" in capabilities:
                     self.gmail_extensions = True
                     logger.info("Gmail IMAP extensions detected")
 
@@ -138,11 +139,9 @@ class ImapGmailClient:
         threads: dict[str, list[bytes]] = defaultdict(list)
 
         if not self.gmail_extensions:
-            # Fallback: each message is its own thread
-            for msg_id in msg_ids:
-                thread_id = f"thread_{msg_id.decode()}"
-                threads[thread_id].append(msg_id)
-            return dict(threads)
+            # Improved fallback: group by subject line patterns instead of individual threads
+            logger.info("Gmail extensions not available, using subject-based threading")
+            return self._group_by_subject_patterns(msg_ids)
 
         # Use Gmail thread ID extension
         for msg_id in msg_ids:
@@ -184,6 +183,165 @@ class ImapGmailClient:
                 threads[thread_id].append(msg_id)
 
         return dict(threads)
+
+    def _group_by_subject_patterns(
+        self, msg_ids: list[bytes]
+    ) -> dict[str, list[bytes]]:
+        """Group messages by normalized subject patterns when Gmail threading isn't available.
+
+        This method attempts to reconstruct conversation threads by:
+        1. Removing common reply/forward prefixes from subjects
+        2. Grouping messages with identical normalized subjects
+        3. Special handling for common notification patterns (JIRA, GitLab, etc.)
+
+        Args:
+            msg_ids: List of message IDs
+
+        Returns:
+            Dictionary mapping thread IDs to lists of message IDs
+        """
+        if self.imap is None:
+            return {}
+
+        # First, fetch basic headers for all messages to get subjects and message-ids
+        message_info: dict[bytes, dict[str, str]] = {}
+
+        for msg_id in msg_ids:
+            try:
+                _, data = self.imap.fetch(msg_id.decode(), "(RFC822.HEADER)")
+                if data and data[0]:
+                    # Parse the headers
+                    if isinstance(data[0], tuple):
+                        headers_raw = data[0][1]
+                    else:
+                        headers_raw = data[0]
+
+                    if isinstance(headers_raw, bytes):
+                        headers_text = headers_raw.decode("utf-8", errors="ignore")
+                    else:
+                        headers_text = str(headers_raw)
+
+                    # Parse email headers
+                    msg_obj = email.message_from_string(headers_text)
+                    subject = self._decode_header(msg_obj.get("Subject", ""))
+                    message_id = msg_obj.get("Message-ID", "")
+                    in_reply_to = msg_obj.get("In-Reply-To", "")
+                    references = msg_obj.get("References", "")
+
+                    message_info[msg_id] = {
+                        "subject": subject,
+                        "message_id": message_id,
+                        "in_reply_to": in_reply_to,
+                        "references": references,
+                    }
+
+            except Exception as e:
+                logger.warning(
+                    f"Error fetching headers for message {msg_id.decode()}: {e}"
+                )
+                # Create minimal info for failed messages
+                message_info[msg_id] = {
+                    "subject": f"Message {msg_id.decode()}",
+                    "message_id": "",
+                    "in_reply_to": "",
+                    "references": "",
+                }
+
+        # Group by normalized subject
+        threads: dict[str, list[bytes]] = defaultdict(list)
+
+        for msg_id, info in message_info.items():
+            normalized_subject = self._normalize_subject(info["subject"])
+
+            # Create a thread ID based on normalized subject
+            if normalized_subject:
+                # Use a hash of the normalized subject for thread ID
+                import hashlib
+
+                thread_id = f"subject_{hashlib.md5(normalized_subject.encode('utf-8')).hexdigest()[:8]}"
+            else:
+                # Fallback for messages with no/empty subject
+                thread_id = f"thread_{msg_id.decode()}"
+
+            threads[thread_id].append(msg_id)
+
+        # Log threading results
+        thread_count = len(threads)
+        message_count = len(msg_ids)
+        logger.info(
+            f"Subject-based threading: grouped {message_count} messages into {thread_count} threads"
+        )
+
+        # Log some examples for debugging
+        for thread_id, msgs in list(threads.items())[:5]:  # Show first 5 threads
+            if len(msgs) > 1:
+                subjects = [
+                    message_info[msg_id]["subject"][:50] + "..." for msg_id in msgs[:3]
+                ]
+                logger.debug(f"Thread {thread_id}: {len(msgs)} messages - {subjects}")
+
+        return dict(threads)
+
+    def _normalize_subject(self, subject: str) -> str:
+        """Normalize email subject for threading by removing reply/forward prefixes.
+
+        Args:
+            subject: Original email subject
+
+        Returns:
+            Normalized subject suitable for thread grouping
+        """
+        if not subject:
+            return ""
+
+        # Remove common prefixes (case insensitive)
+        normalized = subject.strip()
+
+        # Remove reply/forward prefixes - keep removing until no more found
+        while True:
+            original = normalized
+            # Common patterns to remove
+            patterns = [
+                r"^(Re|RE|re):\s*",  # Re:
+                r"^(Fwd|FWD|fwd):\s*",  # Fwd:
+                r"^(Fw|FW|fw):\s*",  # Fw:
+                r"^\[.*?\]\s*",  # [EXTERNAL] or similar
+                r"^\(.*?\)\s*",  # (EXTERNAL) or similar
+                r"^(AW|Aw|aw):\s*",  # German: Antwort
+                r"^(SV|Sv|sv):\s*",  # Swedish: Svar
+                r"^(VS|Vs|vs):\s*",  # Dutch: Verstuur
+            ]
+
+            for pattern in patterns:
+                normalized = re.sub(
+                    pattern, "", normalized, flags=re.IGNORECASE
+                ).strip()
+
+            # If no change, we're done
+            if normalized == original:
+                break
+
+        # Additional normalization for common notification patterns
+
+        # JIRA ticket updates - normalize to base ticket number
+        jira_match = re.search(
+            r"\[RH JIRA\].*?(RHAISTRAT-\d+|AIPCC-\d+|RHAIENG-\d+|RHAIRFE-\d+)",
+            normalized,
+        )
+        if jira_match:
+            return f"[RH JIRA] {jira_match.group(1)}"
+
+        # GitLab merge request notifications
+        gitlab_match = re.search(r"Re: (.+) \| (.+) \(![0-9]+\)", normalized)
+        if gitlab_match:
+            return f"{gitlab_match.group(1)} | {gitlab_match.group(2)}"
+
+        # GitHub pull request notifications
+        github_match = re.search(r"\[([^/]+/[^]]+)\] (.+) \(PR #(\d+)\)", normalized)
+        if github_match:
+            return f"[{github_match.group(1)}] {github_match.group(2)} (PR #{github_match.group(3)})"
+
+        return normalized
 
     def _build_thread_object(
         self, thread_id: str, msg_ids: list[bytes]
