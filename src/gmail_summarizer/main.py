@@ -7,9 +7,12 @@ import click
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
+from rich.progress import BarColumn
+from rich.progress import MofNCompleteColumn
 from rich.progress import Progress
 from rich.progress import SpinnerColumn
 from rich.progress import TextColumn
+from rich.progress import TimeElapsedColumn
 from rich.prompt import Prompt
 from rich.table import Table
 
@@ -352,20 +355,29 @@ def run(
 
             # Fetch and process threads
             console.print("\n[yellow]Fetching Gmail threads...[/yellow]")
+            
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
+                "•",
+                "[cyan]{task.completed}[/cyan] threads fetched",
+                "•",
+                TimeElapsedColumn(),
                 console=console,
             ) as progress:
-                task = progress.add_task("Fetching inbox threads...", total=None)
+                task = progress.add_task("Fetching inbox threads", total=None)
 
                 # Get threads data
                 threads_data = []
                 for thread in gmail_client.get_inbox_threads():
                     messages = gmail_client.get_thread_messages(thread)
                     threads_data.append((thread, messages))
+
+                    # Update progress with current count
                     progress.update(
-                        task, description=f"Fetched {len(threads_data)} threads..."
+                        task,
+                        completed=len(threads_data),
+                        description="Fetching inbox threads"
                     )
 
                     # Stop if we have enough for testing
@@ -389,20 +401,54 @@ def run(
 
             # Generate summaries
             console.print("\n[yellow]Generating AI summaries...[/yellow]")
+
+            # Calculate total threads for progress tracking
+            total_threads = sum(len(threads) for threads in categorized_threads.values())
+
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
+                BarColumn(bar_width=None),
+                "[progress.percentage]{task.percentage:>3.1f}%",
+                "•",
+                MofNCompleteColumn(),
+                "•",
+                TimeElapsedColumn(),
                 console=console,
             ) as progress:
-                total_threads = sum(
-                    len(threads) for threads in categorized_threads.values()
-                )
-                task = progress.add_task("Generating summaries...", total=total_threads)
+                task = progress.add_task("Generating summaries", total=total_threads)
 
-                summarized_threads = summarizer.summarize_threads_batch(
-                    categorized_threads
-                )
-                progress.advance(task, advance=total_threads)
+                summarized_threads = {}
+                threads_processed = 0
+
+                for category_name, threads in categorized_threads.items():
+                    summarized_threads[category_name] = []
+
+                    # Find category configuration
+                    category_config = None
+                    for cat in app_config.get_categories():
+                        if cat["name"] == category_name:
+                            category_config = cat
+                            break
+
+                    if not category_config:
+                        # Use default prompt
+                        category_config = {
+                            "summary_prompt": "Provide a brief summary of this email thread."
+                        }
+
+                    # Process each thread with progress updates
+                    for thread_data in threads:
+                        summarized_thread = summarizer.summarize_thread(thread_data, category_config)
+                        summarized_threads[category_name].append(summarized_thread)
+                        threads_processed += 1
+
+                        # Update progress
+                        progress.update(
+                            task,
+                            completed=threads_processed,
+                            description=f"Generating summaries ({threads_processed}/{total_threads})"
+                        )
 
             # Generate statistics
             stats = summarizer.get_summarization_stats(summarized_threads)
