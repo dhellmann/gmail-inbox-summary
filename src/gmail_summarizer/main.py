@@ -385,27 +385,43 @@ def run(
             # Fetch and process threads
             console.print("\n[yellow]Fetching Gmail threads...[/yellow]")
 
+            # Get total message count for progress calculation
+            total_message_count = gmail_client.get_inbox_message_count()
+            console.print(f"[dim]Found {total_message_count} messages to process[/dim]")
+
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
+                BarColumn(bar_width=None),
+                "[progress.percentage]{task.percentage:>3.1f}%",
                 "•",
-                "[cyan]{task.completed}[/cyan] threads fetched",
+                "[cyan]{task.completed}[/cyan] threads",
+                "•",
+                "[magenta]{task.fields[messages]}[/magenta]/{task.fields[total_msg]} messages",
                 "•",
                 TimeElapsedColumn(),
                 console=console,
             ) as progress:
-                task = progress.add_task("Fetching inbox threads", total=None)
+                task = progress.add_task(
+                    "Fetching inbox threads",
+                    total=total_message_count,
+                    messages=0,
+                    total_msg=total_message_count,
+                )
 
                 # Get threads data
                 threads_data = []
+                total_messages = 0
                 for thread in gmail_client.get_inbox_threads():
                     messages = gmail_client.get_thread_messages(thread)
                     threads_data.append((thread, messages))
+                    total_messages += len(messages)
 
-                    # Update progress with current count
+                    # Update progress with current counts
                     progress.update(
                         task,
-                        completed=len(threads_data),
+                        completed=total_messages,  # Use message count for percentage calculation
+                        messages=total_messages,
                         description="Fetching inbox threads",
                     )
 
@@ -413,7 +429,9 @@ def run(
                     if len(threads_data) >= 100:  # Reasonable limit for testing
                         break
 
-            console.print(f"[green]✓ Fetched {len(threads_data)} threads[/green]")
+            console.print(
+                f"[green]✓ Fetched {len(threads_data)} threads with {total_messages} total messages[/green]"
+            )
 
             # Process and categorize threads
             console.print("\n[yellow]Categorizing threads...[/yellow]")

@@ -77,6 +77,29 @@ class ImapGmailClient:
             logger.warning("IMAP connection lost, reconnecting...")
             self._connect()
 
+    def get_inbox_message_count(self) -> int:
+        """Get the total number of messages in inbox.
+
+        Returns:
+            Total number of messages in inbox
+        """
+        self._ensure_connected()
+        if self.imap is None:
+            raise RuntimeError("IMAP connection not established")
+
+        try:
+            # Select inbox folder
+            self.imap.select("INBOX")
+
+            # Search for all messages in inbox
+            _, message_ids = self.imap.search(None, "ALL")
+            msg_ids = message_ids[0].split()
+
+            return len(msg_ids)
+        except Exception as e:
+            logger.error(f"Error getting inbox message count: {e}")
+            return 0
+
     def get_inbox_threads(
         self, max_results: int | None = None
     ) -> Iterator[dict[str, Any]]:

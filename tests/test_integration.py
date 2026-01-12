@@ -119,6 +119,9 @@ def test_cli_dry_run(
     mock_gmail.get_thread_messages.side_effect = lambda thread: [
         t[1] for t in sample_threads_data if t[0]["id"] == thread["id"]
     ][0]
+    # Mock the new message count method
+    total_messages = sum(len(t[1]) for t in sample_threads_data)
+    mock_gmail.get_inbox_message_count.return_value = total_messages
     mock_gmail_client.return_value = mock_gmail
 
     runner = CliRunner()
@@ -174,6 +177,9 @@ def test_full_workflow_integration(
         for thread_data, msgs in sample_threads_data
         if thread_data["id"] == thread["id"]
     ][0]
+    # Mock the new message count method
+    total_messages = sum(len(msgs) for _, msgs in sample_threads_data)
+    mock_gmail.get_inbox_message_count.return_value = total_messages
     mock_gmail_client.return_value = mock_gmail
 
     # Setup LLM summarizer mock
