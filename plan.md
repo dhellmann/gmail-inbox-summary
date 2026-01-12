@@ -147,7 +147,7 @@ gmail-inbox-summary/
 
 - **README.md**: Comprehensive user guide with examples and troubleshooting
 - **INSTALL.md**: Step-by-step installation guide with prerequisites
-- **config.yaml.example**: Fully documented example configuration
+- Configuration template in main.py CLI for easy setup
 - Inline code documentation and type hints throughout
 
 ## Hatch Configuration (pyproject.toml)

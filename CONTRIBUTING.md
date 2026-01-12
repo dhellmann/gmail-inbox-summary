@@ -358,8 +358,8 @@ hatch run python -m pytest tests/test_integration.py -v -s
 ### Working with Configuration
 
 ```bash
-# Test with sample configuration
-cp config.yaml.example test_config.yaml
+# Generate and test with sample configuration
+gmail-summary config generate --email test@example.com --output test_config.yaml
 gmail-summary --config test_config.yaml --dry-run
 ```
 

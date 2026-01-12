@@ -82,27 +82,26 @@ gmail-summary --help
 
 ## Configuration
 
-1. **Copy Example Configuration:**
+1. **Generate Configuration:**
    ```bash
-   cp config.yaml.example config.yaml
+   gmail-summary config generate --email your.email@gmail.com
    ```
 
-2. **Edit Configuration:**
+2. **Store Gmail Credentials Securely:**
+   ```bash
+   gmail-summary creds store --email your.email@gmail.com
+   ```
+   Enter your app-specific password when prompted.
+
+3. **Customize Configuration (Optional):**
    ```bash
    # Edit with your preferred editor
-   nano config.yaml
+   nano ~/.config/gmail-inbox-summary/config.yaml
    # or
-   code config.yaml
+   code ~/.config/gmail-inbox-summary/config.yaml
    ```
 
-3. **Update Gmail Credentials:**
-   ```yaml
-   gmail:
-     email_address: "your.email@gmail.com"      # Your Gmail address
-     password: "your-app-specific-password"     # App password from step 2
-   ```
-
-4. **Customize Categories and Performance:**
+4. **Customize Categories and Performance (Optional):**
    - Modify email patterns to match your inbox
    - Adjust summary prompts for your needs
    - Set appropriate output file location
