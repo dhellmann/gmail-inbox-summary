@@ -675,7 +675,7 @@ categories:
 
   # Development notifications (GitHub, GitLab, etc.) - renamed from "Development" to "Code"
   - name: "Code"
-    summary_prompt: "Summarize this development-related notification, focusing on code changes, PR status, issues, and deployments."
+    summary_prompt: "Summarize this development-related notification. For releases: only include version and link to release notes. For other notifications: focus on code changes, PR status, issues, and deployments."
     criteria:
       labels:
         - "github"      # GitHub notifications
