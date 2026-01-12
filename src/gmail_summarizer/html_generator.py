@@ -5,9 +5,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import markdown
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from jinja2 import select_autoescape
+
+try:
+    from jinja2 import Markup
+except ImportError:
+    # For newer versions of Jinja2, Markup is in markupsafe
+    from markupsafe import Markup
 
 from .config import Config
 
@@ -86,10 +93,23 @@ class HTMLGenerator:
             except (ValueError, OSError):
                 return ""
 
+        def markdown_to_html(text: str | None) -> Markup:
+            """Convert markdown text to HTML."""
+            if not text:
+                return Markup("")
+            try:
+                html = markdown.markdown(text, extensions=["nl2br"])
+                return Markup(html)
+            except Exception as e:
+                logger.warning(f"Failed to convert markdown to HTML: {e}")
+                # Fall back to escaped text if markdown conversion fails
+                return Markup(text.replace("\n", "<br>"))
+
         self.jinja_env.filters["truncate_text"] = truncate_text
         self.jinja_env.filters["format_email"] = format_email
         self.jinja_env.filters["domain_from_email"] = domain_from_email
         self.jinja_env.filters["format_date"] = format_date
+        self.jinja_env.filters["markdown"] = markdown_to_html
 
     def generate_html_report(
         self,

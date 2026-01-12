@@ -43,10 +43,11 @@ class LLMSummarizer:
             # Extract thread content for summarization
             thread_content = self._prepare_thread_content(thread_data)
 
-            # Get category-specific prompt
-            prompt = category.get(
+            # Get category-specific prompt and add markdown formatting instruction
+            base_prompt = category.get(
                 "summary_prompt", "Provide a brief summary of this email thread."
             )
+            prompt = f"{base_prompt}\n\nFormat your response using markdown for better readability, but keep the markup minimal. Do not add any headings."
 
             # Generate summary using Claude Code CLI
             summary = self._call_claude_cli(thread_content, prompt)

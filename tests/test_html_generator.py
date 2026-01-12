@@ -39,6 +39,32 @@ def test_custom_filters() -> None:
     assert domain_filter("user@example.com") == "example.com"
     assert domain_filter("John Doe <user@example.com>") == "example.com"
 
+    # Test markdown filter
+    markdown_filter = generator.jinja_env.filters["markdown"]
+
+    # Test basic markdown formatting
+    result = markdown_filter("**bold** and *italic* text")
+    assert "<strong>bold</strong>" in str(result)
+    assert "<em>italic</em>" in str(result)
+
+    # Test bullet points
+    result = markdown_filter("- Item 1\n- Item 2")
+    assert "<ul>" in str(result)
+    assert "<li>Item 1</li>" in str(result)
+    assert "<li>Item 2</li>" in str(result)
+
+    # Test line breaks
+    result = markdown_filter("Line 1\nLine 2")
+    assert "<br>" in str(result) or "<p>" in str(result)
+
+    # Test empty input
+    result = markdown_filter("")
+    assert str(result) == ""
+
+    # Test None input handling in the filter function
+    result = markdown_filter(None)
+    assert str(result) == ""
+
 
 def test_template_context_preparation() -> None:
     """Test template context preparation."""

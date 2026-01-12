@@ -247,6 +247,30 @@
             line-height: 1.4;
         }
 
+        .thread-summary ul,
+        .thread-summary ol {
+            margin-left: 16px;
+            padding-left: 8px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .thread-summary li {
+            margin-bottom: 4px;
+        }
+
+        .thread-summary p {
+            margin: 8px 0;
+        }
+
+        .thread-summary p:first-child {
+            margin-top: 0;
+        }
+
+        .thread-summary p:last-child {
+            margin-bottom: 0;
+        }
+
 
         .error-message {
             color: #dc3545;
@@ -364,7 +388,7 @@
 
                         {% if thread.summary_generated %}
                         <div class="thread-summary">
-                            {{ thread.summary | e }}
+                            {{ thread.summary | markdown }}
                         </div>
                         {% else %}
                         <div class="error-message">
